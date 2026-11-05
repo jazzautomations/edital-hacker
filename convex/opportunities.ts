@@ -13,7 +13,7 @@ export const list = query({
       .query("opportunities")
       .withIndex("by_status", (q) => q.eq("status", "open"))
       .collect();
-    return items
+    const filtered = items
       .filter((o) => !o.registrationTo || o.registrationTo >= now)
       .filter((o) => !args.area || o.categories.some((c) => c.toLowerCase().includes(args.area!.toLowerCase())))
       .filter(
@@ -21,7 +21,18 @@ export const list = query({
           !args.proponentType ||
           o.proponentTypes.length === 0 ||
           o.proponentTypes.some((t) => t.toLowerCase().includes(args.proponentType!.toLowerCase()))
-      )
+      );
+    // Dedup cross-fonte (FR-003): mesmo nome normalizado + mesmo dia de
+    // fechamento = mesmo edital em fontes diferentes → fica a versão
+    // enriquecida, senão a primeira.
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+    const byKey = new Map<string, (typeof filtered)[number]>();
+    for (const o of filtered) {
+      const key = `${norm(o.name)}|${o.registrationTo?.slice(0, 10) ?? "?"}`;
+      const cur = byKey.get(key);
+      if (!cur || (!cur.enriched && o.enriched)) byKey.set(key, o);
+    }
+    return [...byKey.values()]
       .sort((a, b) => (a.registrationTo ?? "").localeCompare(b.registrationTo ?? ""))
       .slice(0, args.limit ?? 100);
   },

@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import type { Opportunity } from "@/lib/types";
+import { useState } from "react";
+import type { Opportunity, Profile } from "@/lib/types";
 
 function deadlineBadge(registrationTo?: string) {
   if (!registrationTo) return null;
@@ -20,12 +21,26 @@ function deadlineBadge(registrationTo?: string) {
 }
 
 export default function Oportunidades() {
+  const [email] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
+  );
+  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
+    | Profile | null | undefined;
+  const addToPipeline = useMutation(api.pipeline.add);
+  const [added, setAdded] = useState<Set<string>>(new Set());
+
   const opps = useQuery(api.opportunities.list, {
     limit: 100,
   }) as Opportunity[] | undefined;
   const bySource = useQuery(api.opportunities.countBySource) as
     | Record<string, number>
     | undefined;
+
+  function eligibilityOf(o: Opportunity): "ok" | "warn" | null {
+    if (!profile || o.proponentTypes.length === 0) return null;
+    const t = profile.personType.split(" ")[1]?.toLowerCase() ?? profile.personType.toLowerCase();
+    return o.proponentTypes.some((p) => p.toLowerCase().includes(t)) ? "ok" : "warn";
+  }
 
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-10">
@@ -86,7 +101,22 @@ export default function Oportunidades() {
                   {o.shortDescription}
                 </p>
               )}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {eligibilityOf(o) === "ok" && (
+                  <span className="rounded-full bg-emerald-900/60 px-2 py-0.5 text-xs text-emerald-300">
+                    aceita você ✓
+                  </span>
+                )}
+                {eligibilityOf(o) === "warn" && (
+                  <span className="rounded-full bg-red-900/60 px-2 py-0.5 text-xs text-red-300">
+                    pode não aceitar {profile!.personType}
+                  </span>
+                )}
+                {!o.enriched && (
+                  <span className="rounded-full bg-amber-900/50 px-2 py-0.5 text-xs text-amber-300">
+                    análise parcial
+                  </span>
+                )}
                 {o.proponentTypes.map((t) => (
                   <span
                     key={t}
@@ -103,9 +133,24 @@ export default function Oportunidades() {
                     {c}
                   </span>
                 ))}
+                {profile && (
+                  <button
+                    onClick={async () => {
+                      await addToPipeline({
+                        profileId: profile._id as any,
+                        opportunityId: o._id as any,
+                        stage: "interessado",
+                      });
+                      setAdded((s) => new Set(s).add(o._id));
+                    }}
+                    className="ml-auto rounded-lg bg-neutral-800 px-3 py-1 text-xs font-semibold hover:bg-neutral-700"
+                  >
+                    {added.has(o._id) ? "No pipeline ✓" : "+ pipeline"}
+                  </button>
+                )}
                 <Link
                   href={`/sabatina/${o._id}`}
-                  className="ml-auto rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20"
+                  className={`${profile ? "" : "ml-auto"} rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20`}
                 >
                   Sabatinar →
                 </Link>

@@ -81,6 +81,48 @@ export default defineSchema({
   alertLog: defineTable({
     profileId: v.id("profiles"),
     opportunityId: v.id("opportunities"),
+    kind: v.optional(v.string()),
     sentAt: v.number(),
   }).index("by_profile_opp", ["profileId", "opportunityId"]),
+
+  sabatinaSessions: defineTable({
+    profileId: v.id("profiles"),
+    opportunityId: v.id("opportunities"),
+    turns: v.array(v.object({ role: v.string(), text: v.string() })),
+    verdict: v.optional(
+      v.object({
+        score: v.number(),
+        summary: v.string(),
+        gaps: v.array(v.string()),
+        missingDocs: v.array(v.string()),
+        warnings: v.optional(v.array(v.string())),
+        injectionDetected: v.optional(v.boolean()),
+      })
+    ),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+  }).index("by_profile", ["profileId"]),
+
+  subscriptions: defineTable({
+    profileId: v.id("profiles"),
+    abacateId: v.string(),
+    checkoutId: v.optional(v.string()),
+    plan: v.string(),
+    cycle: v.optional(v.string()),
+    status: v.string(),
+    updatedAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
+  unlockedEdits: defineTable({
+    profileId: v.id("profiles"),
+    opportunityId: v.id("opportunities"),
+    checkoutId: v.string(),
+    paidAt: v.number(),
+  }).index("by_profile_opp", ["profileId", "opportunityId"]),
+
+  webhookLog: defineTable({
+    eventId: v.string(),
+    kind: v.string(),
+    processedAt: v.number(),
+  }).index("by_event", ["eventId"]),
 });

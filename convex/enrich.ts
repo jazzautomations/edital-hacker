@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
+import { scrapeMarkdown } from "../lib/firecrawl";
 
 const ENRICH_SCHEMA = {
   type: "object",
@@ -36,21 +37,6 @@ const ENRICH_SCHEMA = {
   required: ["disqualifiers", "requiredDocs", "rubric", "deadlines"],
 };
 
-async function scrapeWithFirecrawl(url: string): Promise<string> {
-  const key = process.env.FIRECRAWL_API_KEY;
-  if (!key) throw new Error("FIRECRAWL_API_KEY not set");
-  const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: false }),
-  });
-  if (!res.ok) throw new Error(`Firecrawl HTTP ${res.status}`);
-  const json = await res.json();
-  const md = json?.data?.markdown;
-  if (!md) throw new Error("Firecrawl returned no markdown");
-  return md;
-}
-
 async function structureWithGemini(markdown: string, context: string) {
   const { GoogleGenAI } = await import("@google/genai");
   const key = process.env.GEMINI_API_KEY;
@@ -70,7 +56,7 @@ export const enrich = internalAction({
   handler: async (ctx, args) => {
     const opp = await ctx.runQuery(api.opportunities.get, { id: args.id });
     if (!opp) throw new Error("opportunity not found");
-    const markdown = await scrapeWithFirecrawl(opp.sourceUrl);
+    const markdown = await scrapeMarkdown(opp.sourceUrl);
     const enriched = await structureWithGemini(markdown, opp.name);
     await ctx.runMutation(internal.opportunities.setEnriched, {
       id: args.id,
