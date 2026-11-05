@@ -34,7 +34,7 @@ export default function Home() {
 
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
         {[
-          ["R$ 2,4 bi/ano", "em fomento público parado atrás de burocracia"],
+          ["R$ 15 bi", "da PNAB descentralizados pra estados e municípios"],
           ["15–20%", "é o que um booker humano cobra por show"],
           ["45+ fontes", "instâncias Mapas Culturais + sites municipais"],
         ].map(([num, label]) => (

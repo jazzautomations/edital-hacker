@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { sendEmail } from "../lib/resend";
+import { personTypeMatches } from "../lib/types";
 
 export const recordAlert = internalMutation({
   args: {
@@ -32,11 +33,7 @@ function matchesProfile(profile: any, o: any): boolean {
         c.toLowerCase().includes(a.toLowerCase())
       )
     );
-  const typeOk =
-    o.proponentTypes.length === 0 ||
-    o.proponentTypes.some((t: string) =>
-      t.toLowerCase().includes(profile.personType.toLowerCase().split(" ")[1] ?? profile.personType)
-    );
+  const typeOk = personTypeMatches(profile.personType, o.proponentTypes);
   return areasOk && typeOk;
 }
 

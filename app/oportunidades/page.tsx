@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
-import type { Opportunity, Profile } from "@/lib/types";
+import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
 
 function deadlineBadge(registrationTo?: string) {
   if (!registrationTo) return null;
@@ -38,8 +38,7 @@ export default function Oportunidades() {
 
   function eligibilityOf(o: Opportunity): "ok" | "warn" | null {
     if (!profile || o.proponentTypes.length === 0) return null;
-    const t = profile.personType.split(" ")[1]?.toLowerCase() ?? profile.personType.toLowerCase();
-    return o.proponentTypes.some((p) => p.toLowerCase().includes(t)) ? "ok" : "warn";
+    return personTypeMatches(profile.personType, o.proponentTypes) ? "ok" : "warn";
   }
 
   return (

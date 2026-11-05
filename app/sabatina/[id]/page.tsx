@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import type { SabatinaContext, ChatTurn } from "@/lib/gemini";
-import type { Opportunity, Profile } from "@/lib/types";
+import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
 
 interface Msg {
   role: "user" | "model";
@@ -77,10 +77,7 @@ export default function Sabatina({
     !planStatus.unlockedOpportunityIds.includes(oppId as string);
 
   const ineligible =
-    opp && opp.proponentTypes.length > 0 && form.personType &&
-    !opp.proponentTypes.some((t) =>
-      t.toLowerCase().includes(form.personType.split(" ")[1]?.toLowerCase() ?? form.personType.toLowerCase())
-    );
+    opp && form.personType && !personTypeMatches(form.personType, opp.proponentTypes);
 
   async function sendTurn(userText?: string) {
     if (!opp) return;

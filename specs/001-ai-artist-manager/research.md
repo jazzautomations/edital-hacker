@@ -19,6 +19,15 @@ abertas** (MinC 64, Ceará 41, Pernambuco 15, ES 10, GO 1, PA 1). DF e
 Maranhão respondem 403 (WAF); MT/MS/SPCultura fora do ar; Sergipe exigia
 https (corrigido).
 
+**Contexto de política (verificado)**: a PNAB (Lei 14.399/2022, ampliada
+pela MPV 1.274/2024 → Lei 12.132/2025) destina **R$ 15 bilhões** a
+estados/DF/municípios — até R$ 3 bi/ano, 97% dos municípios aderiram. O
+artista NÃO acessa o MinC direto: acessa o edital do SEU município. A
+Lei 14.903/2024 (marco regulatório) criou 5 instrumentos (execução,
+premiação, bolsa, ocupação, cooperação cultural) = mais tipos de
+oportunidade pra normalizar. A federação do produto espelha a federação
+do dinheiro — esse é o argumento central do pitch.
+
 **Alternativas consideradas**: scrapear tudo com Firecrawl (descartado como
 fonte primária — a API é grátis e estruturada); apenas federal (descartado
 — perde o argumento de cobertura municipal).

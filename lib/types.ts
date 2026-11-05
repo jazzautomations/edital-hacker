@@ -54,3 +54,23 @@ export interface PipelineItem {
   updatedAt: number;
   opportunity?: Opportunity | null;
 }
+
+// personType do perfil → keywords que casam nos registrationProponentTypes
+// do Mapas. "Coletivo sem CNPJ" conta como PF na maioria dos editais.
+const PERSON_TYPE_KEYWORDS: Record<string, string[]> = {
+  "Pessoa Física": ["física", "fisica", "pf", "pessoa física", "pessoa fisica"],
+  MEI: ["mei", "física", "fisica", "microempreendedor"],
+  "Pessoa Jurídica": ["jurídica", "juridica", "pj", "pessoa jurídica", "pessoa juridica"],
+  "Coletivo sem CNPJ": ["coletivo", "física", "fisica", "informal"],
+};
+
+export function personTypeMatches(
+  personType: string,
+  proponentTypes: string[]
+): boolean {
+  if (proponentTypes.length === 0) return true;
+  const keys = PERSON_TYPE_KEYWORDS[personType] ?? [personType.toLowerCase()];
+  return proponentTypes.some((p) =>
+    keys.some((k) => p.toLowerCase().includes(k))
+  );
+}
