@@ -28,6 +28,7 @@ export interface MapasOpportunity {
   registrationProponentTypes?: string[];
   registrationCategories?: string[];
   registrationRanges?: string[];
+  registrationLimitPerOwner?: number;
   totalResource?: number;
   vacancies?: number;
   site?: string;
@@ -45,6 +46,7 @@ const SELECT = [
   "registrationTo",
   "registrationProponentTypes",
   "registrationCategories",
+  "registrationLimitPerOwner",
   "totalResource",
   "vacancies",
   "site",

@@ -132,6 +132,13 @@ export default function Oportunidades() {
                     {c}
                   </span>
                 ))}
+                {o.registrationLimitPerOwner != null &&
+                  o.registrationLimitPerOwner > 0 && (
+                    <span className="rounded-full bg-orange-900/50 px-2 py-0.5 text-xs text-orange-300">
+                      máx {o.registrationLimitPerOwner} proposta
+                      {o.registrationLimitPerOwner > 1 ? "s" : ""}/proponente
+                    </span>
+                  )}
                 {profile && (
                   <button
                     onClick={async () => {

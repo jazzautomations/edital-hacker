@@ -58,7 +58,7 @@ representação**.
 
 | Concorrente | Foco | Preço | Cobertura | Gap que deixa |
 |---|---|---|---|---|
-| Projeto Contemplado | escrever proposta c/ IA | R$19/edital · R$99–249/mês | ~59 editais (federal) | para na inscrição; sem CRM/banca/booking |
+| Projeto Contemplado | escrever proposta c/ IA | R$19/edital · R$99–249/mês | ~59 editais (+internacionais) | para na exportação; sem CRM/banca/prestação; cobertura curada |
 | Clube Emma | Rouanet/PNAB/ProAC | R$1.997/ano ecossistema | editais grandes | caro; sem cobertura municipal |
 | CultureFlow | match + orçamento | até R$197/mês | 400+ monitorados | prestação só no Pro; sem banca simulada |
 | Guria | docs/compliance B2G | prefeitura paga | B2G | artista depende da secretaria contratar |

@@ -65,6 +65,7 @@ export const upsert = internalMutation({
     categories: v.array(v.string()),
     totalResource: v.optional(v.number()),
     vacancies: v.optional(v.number()),
+    registrationLimitPerOwner: v.optional(v.number()),
     ownerName: v.optional(v.string()),
     sourceUrl: v.string(),
   },

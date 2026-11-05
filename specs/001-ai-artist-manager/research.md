@@ -32,6 +32,32 @@ do dinheiro — esse é o argumento central do pitch.
 fonte primária — a API é grátis e estruturada); apenas federal (descartado
 — perde o argumento de cobertura municipal).
 
+**Descobertas API (verificado ao vivo)**:
+- `evaluationMethodConfiguration` retorna só um ID — entidade sem endpoint
+  público. Rubrica/critérios reais exigem a página do edital (Firecrawl
+  enrich é requisito, não opcional).
+- Fases são oportunidades-filhas: `GET /api/opportunity/find?parent=EQ(id)`
+  retorna nome+datas+status das fases (resultado, recurso etc.) — fonte
+  estruturada de "datas-chave" sem scraping (enriquecimento futuro).
+- `registrationLimitPerOwner` (máx. propostas por proponente) é campo
+  selecionável → normalizado no schema, vira tag de atenção no feed —
+  desclassificador real direto da API.
+- `describe` expõe ~100 campos; `longDescription` vem nulo (conteúdo mora
+  na página), `registrationSteps`/`registrationRanges` são IDs de entidade.
+
+**Teardown Projeto Contemplado (site verificado)**: mais forte que a
+estimativa — 59 editais abertos incluindo **internacionais** (Royal
+Drawing School, Fondation François Schneider), ficha de IA por edital,
+filtro de elegibilidade PF/MEI/PJ/ONG/coletivo+UF, taxonomia por tipo de
+instrumento (ocupação/fomento/incentivado ≈ Lei 14.903), email de novos
+editais, magic-link auth, mesma honestidade ("a IA não garante"). Preços:
+grátis 1 inscrição/mês · R$19 avulso · R$99/mês · R$249/mês Estúdio.
+**Gaps que permanecem**: para na exportação da proposta (zero pipeline/
+CRM/prestação), sem banca simulada (eles escrevem POR você; nós
+stress-testamos CONTRA você), cobertura curada e não federada
+automatizada. Implicação: a demo não pode abrir no feed (paridade) —
+abre na sabatina + pipeline.
+
 ### Decisão: Firecrawl `/v2/agent` para fontes bloqueadas + `/v2/scrape` JSON-mode para enriquecimento
 
 **Rationale**: `/agent` aceita `prompt` + JSON schema + `location: {country:

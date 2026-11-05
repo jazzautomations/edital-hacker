@@ -21,6 +21,7 @@ export const run = internalAction({
             categories: o.registrationCategories ?? [],
             totalResource: o.totalResource ?? undefined,
             vacancies: o.vacancies ?? undefined,
+            registrationLimitPerOwner: o.registrationLimitPerOwner ?? undefined,
             ownerName: o.owner?.name ?? undefined,
             sourceUrl: opportunityUrl(source.baseUrl, o.id),
           });

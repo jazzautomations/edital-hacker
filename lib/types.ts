@@ -22,6 +22,7 @@ export interface Opportunity {
   categories: string[];
   totalResource?: number;
   vacancies?: number;
+  registrationLimitPerOwner?: number;
   ownerName?: string;
   sourceUrl: string;
   status: string;

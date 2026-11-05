@@ -15,6 +15,7 @@ export default defineSchema({
     categories: v.array(v.string()),
     totalResource: v.optional(v.number()),
     vacancies: v.optional(v.number()),
+    registrationLimitPerOwner: v.optional(v.number()),
     ownerName: v.optional(v.string()),
     sourceUrl: v.string(),
     status: v.string(),
