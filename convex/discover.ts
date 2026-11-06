@@ -37,8 +37,8 @@ export const discoverSource = internalAction({
 });
 
 export const discoverBlocked = internalAction({
-  handler: async (ctx) => {
-    const results = [];
+  handler: async (ctx): Promise<{ source: string; found: number; upserted: number; error?: string }[]> => {
+    const results: { source: string; found: number; upserted: number; error?: string }[] = [];
     for (const s of BLOCKED_SOURCES) {
       try {
         results.push(

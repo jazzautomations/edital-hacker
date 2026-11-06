@@ -81,7 +81,7 @@ export const run = internalAction({
           const r = await sendEmail(
             profile.email,
             `Faltam poucos dias: ${o.name}`,
-            `<p>O edital <b>${o.name}</b> (${o.sourceName}) fecha inscrições em <b>${o.registrationTo.slice(0, 10)}</b> e tá no seu pipeline.</p><p><a href="${o.sourceUrl}">Abrir edital</a></p>`
+            `<p>O edital <b>${o.name}</b> (${o.sourceName}) fecha inscrições em <b>${o.registrationTo?.slice(0, 10) ?? "em breve"}</b> e tá no seu pipeline.</p><p><a href="${o.sourceUrl}">Abrir edital</a></p>`
           );
           sent.push({ kind: "deadline", email: profile.email, opp: o.name, ...r });
         }

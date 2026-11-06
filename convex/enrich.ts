@@ -76,9 +76,9 @@ export const enrich = internalAction({
 
 export const enrichBatch = internalAction({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    const items = await ctx.runQuery(api.opportunities.list, { limit: args.limit ?? 10 });
-    const out = [];
+  handler: async (ctx, args): Promise<{ id: string; ok: boolean; error?: string }[]> => {
+    const items: any[] = await ctx.runQuery(api.opportunities.list, { limit: args.limit ?? 10 });
+    const out: { id: string; ok: boolean; error?: string }[] = [];
     for (const o of items.filter((i: any) => !i.enriched)) {
       try {
         await ctx.runAction(internal.enrich.enrich, { id: o._id });

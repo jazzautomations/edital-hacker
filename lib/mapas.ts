@@ -25,11 +25,11 @@ export interface MapasOpportunity {
   longDescription?: string;
   registrationFrom?: MapasDate;
   registrationTo?: MapasDate;
-  registrationProponentTypes?: string[];
-  registrationCategories?: string[];
-  registrationRanges?: string[];
-  registrationLimitPerOwner?: number;
-  totalResource?: number;
+  registrationProponentTypes?: string[] | string;
+  registrationCategories?: string[] | string;
+  registrationRanges?: string[] | string;
+  registrationLimitPerOwner?: number | string;
+  totalResource?: number | string;
   vacancies?: number;
   site?: string;
   status?: number;
@@ -72,7 +72,7 @@ export async function fetchOpenOpportunities(
 
   const res = await fetch(url, {
     headers: { "User-Agent": "edital-hacker/0.1 (+hackbrasil)" },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(30000),
   });
   if (!res.ok) throw new Error(`Mapas ${source.baseUrl}: HTTP ${res.status}`);
   const data = await res.json();
@@ -82,4 +82,14 @@ export async function fetchOpenOpportunities(
 export function toIso(d?: MapasDate): string | undefined {
   if (!d?.date) return undefined;
   return d.date.replace(" ", "T") + "-03:00";
+}
+
+export function toStrArray(v?: string[] | string): string[] {
+  if (Array.isArray(v)) return v;
+  return v ? [v] : [];
+}
+
+export function toNum(v?: number | string): number | undefined {
+  const n = Number(v);
+  return v === undefined || v === null || isNaN(n) ? undefined : n;
 }
