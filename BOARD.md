@@ -27,9 +27,10 @@ Ordem: T005 → E2E checks → T027 → T044 → T045 → T046–T050
 
 ## A fazer
 
-### [T005] Convex dev real (BLOQUEIO P0)
-- Dono: **Muniz** (login humano) + Devin (resto)
-- Pronto quando: `npx convex dev` conecta, `_generated` real substitui stubs, `ingest:run` roda e o feed mostra dados vivos
+### ~~[T005] Convex dev real~~ ✅ FEITO
+- Deploy: `keen-kangaroo-265.convex.cloud` (jazzautomations/edital-hacker)
+- `ingest:run` rodou: **110 oportunidades reais** (MinC 64, CE 34, ES 10, GO 1, PA 1)
+- Bugs expostos e corrigidos: Mapas manda `totalResource`/`categories` como string → normalização `toNum`/`toStrArray`; isolamento por registro; 4 fontes não respondem ao cloud Convex (PE/SE/MA/SPCultura) → Firecrawl discover cobre
 
 ### [E2E] Bateria end-to-end
 - Dono: Devin
@@ -93,4 +94,5 @@ Ordem: T005 → E2E checks → T027 → T044 → T045 → T046–T050
 
 ## Travado / ajuda
 
-- **T005 travado**: precisa do login Convex do Muniz — bloqueia todo E2E. Há ~3h. DESTRAVAR HOJE.
+- ~~T005~~ **destravado**: login feito via device-auth (link no cel), deploy `keen-kangaroo-265`, 110 opps no banco
+- **Próximo**: `.env.local` com GEMINI/FIRECRAWL/RESEND/ABACATE keys → E2E completo da sabatina/billing
