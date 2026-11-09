@@ -19,14 +19,16 @@
 ✅ T005 convex dev → 110 opps reais no banco
 ✅ D011 prospecção MVP → leads+gigs deployados (E2E pendente de FIRECRAWL_API_KEY)
 ✅ D013 coach → agenda/cachês no ar
+✅ T053 voz → UI+verdict no pipeline; pendente AGORA_* + APP_URL pública
+✅ T054 sponsors deep → monitoring+Nvoip+digest+EPK+contrato+prestação codados
+✅ P001 roteiro do vídeo → specs/001-ai-artist-manager/pitch-video.md
 E2E sabatina/billing → precisa LLM_API_KEY + ABACATE_* no .env.local + convex env
-T027 voz Agora → backend pronto, UI em progresso (subagente); precisa AGORA_*
+T055 setup externo → envs convex + monitors.setup + rascunho no painel (perks!)
 T044 WorkOS → após paywall E2E
 T045 deploy Vercel → após E2E
-P001–P008 submissão → roteiro do vídeo em progresso (subagente)
 ```
 
-Ordem: E2E (keys!) → voz UI → T044 → T045 → T046–T050
+Ordem: **rascunho no painel (destrava keys grátis)** → keys+convex env → E2E → T044 → T045 → T046–T050
 
 ## A fazer
 
@@ -50,8 +52,23 @@ Ordem: E2E (keys!) → voz UI → T044 → T045 → T046–T050
 
 ### [T053] Voz Agora
 - Backend ✅ (`/api/voice-session` + `/api/voice-llm`, managed ASR/TTS/LLM)
-- UI: em progresso (subagente) — `components/VoiceSabatina.tsx`
-- Precisa: AGORA_APP_ID/CUSTOMER_ID/SECRET + túnel pública p/ voice-llm em dev
+- UI ✅ (`components/VoiceSabatina.tsx` integrada na tela started da sabatina)
+- Loop fechado ✅ — tool `submit_verdict` → `/api/voice-verdict` grava score no pipeline (D017)
+- Precisa: AGORA_APP_ID/CUSTOMER_ID/SECRET + APP_URL pública p/ o agente alcançar voice-verdict
+
+### ~~[T054] Pacote sponsor deep (pesquisa 09/11)~~ ✅ CÓDIGO FEITO (E2E pendente)
+- Firecrawl Monitoring: `createMonitor` + `convex/monitors.setup` + `/webhooks/firecrawl` → upsert automático (D017)
+- Nvoip/Evolution: `lib/nvoip.ts` (OAuth, SMS, torpedo voz, OTP, WA template) + `lib/notify.ts` multi-canal + `/api/notify` + `profiles.phone` + alerta deadline_phone (D016)
+- Digest semanal: `convex/digest.run` + cron seg 9h BRT (Resend batch)
+- Artefatos: `/epk` (press kit vivo, sem cachê público) · `/api/contrato` 11 cláusulas + checklist · `/prestacao` + `/api/prestacao` Anexo V PNAB · check-in in-app no `/agenda`
+- Pronto de verdade quando: monitor dispara webhook real, SMS sai pro número do time, veredito de voz cai no kanban
+
+### [T055] Setup externo das novas integrações
+- `npx convex env set` p/ Convex: LLM_API_KEY, FIRECRAWL_API_KEY(+WEBHOOK_SECRET), RESEND_API_KEY/FROM, NOTIFY_SECRET, APP_URL
+- Rodar `convex/monitors.setup` 1x no dashboard após FIRECRAWL_* configurado
+- Nvoip: criar conta NOVA c/ código do painel → OAuth client escopos sms:send/call:make → NVOIP_* envs
+- Evolution: EVOLUTION_API_URL/KEY (pegar no imac) + NOTIFY_SECRET + APP_URL local
+- Submeter rascunho no painel hackbrasil → destrava perks (Firecrawl 5k, Nvoip 3m, Devin $20)
 
 ### [SQUAD] Divisão do time (proposta ao grupo 09/11)
 - Laura → T044 auth + perfil | Asthri → filtros feed | AdminLTR → qualidade sabatina | Felipe → inscrição+vídeo | Devin → E2E+voz+crons
