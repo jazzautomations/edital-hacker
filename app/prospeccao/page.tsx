@@ -69,6 +69,7 @@ export default function Prospeccao() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [contacted, setContacted] = useState<Set<string>>(new Set());
+  const [pitches, setPitches] = useState<Record<string, { subject: string; body: string } | "loading" | "error">>({});
 
   async function hunt() {
     if (!profile || !city || !niche || running) return;
@@ -211,6 +212,69 @@ export default function Prospeccao() {
                 )}
                 {l.contact && (
                   <p className="mt-2 font-mono text-xs text-emerald-300">✉ {l.contact}</p>
+                )}
+                {l.status !== "perdido" && (
+                  <div className="mt-2">
+                    {pitches[l._id] === undefined && (
+                      <button
+                        onClick={async () => {
+                          setPitches((p) => ({ ...p, [l._id]: "loading" }));
+                          const res = await fetch("/api/pitch", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              profile: { name: profile.name, artAreas: profile.artAreas, bio: profile.bio, portfolioUrl: profile.portfolioUrl },
+                              lead: { name: l.name, kind: l.kind, city: l.city },
+                            }),
+                          });
+                          const data = await res.json();
+                          setPitches((p) => ({ ...p, [l._id]: data.error ? "error" : data }));
+                        }}
+                        className="text-xs text-emerald-400 hover:underline"
+                      >
+                        ✍ escrever pitch de booking
+                      </button>
+                    )}
+                    {pitches[l._id] === "loading" && <p className="text-xs text-neutral-500">escrevendo…</p>}
+                    {pitches[l._id] === "error" && <p className="text-xs text-red-400">falhou — configura LLM_API_KEY</p>}
+                    {typeof pitches[l._id] === "object" && (
+                      <div className="rounded-lg bg-neutral-900 p-3 text-xs">
+                        <p className="font-semibold text-neutral-200">{(pitches[l._id] as any).subject}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-neutral-400">{(pitches[l._id] as any).body}</p>
+                        <a
+                          href={`mailto:${l.contact?.includes("@") ? l.contact : ""}?subject=${encodeURIComponent((pitches[l._id] as any).subject)}&body=${encodeURIComponent((pitches[l._id] as any).body)}`}
+                          className="mt-2 inline-block rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-black"
+                        >
+                          abrir no email →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(l.status === "negociando" || l.status === "fechado") && (
+                  <button
+                    onClick={async () => {
+                      const res = await fetch("/api/proposta", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          profile: { name: profile.name, personType: profile.personType, portfolioUrl: profile.portfolioUrl, email: profile.email },
+                          lead: { name: l.name, kind: l.kind, city: l.city },
+                          gig: {
+                            title: `Apresentação — ${l.name}`,
+                            date: gigForm?.leadId === l._id ? gigForm.date : undefined,
+                            fee: gigForm?.leadId === l._id && gigForm.fee ? Number(gigForm.fee.replace(",", ".")) : undefined,
+                          },
+                        }),
+                      });
+                      if (!res.ok) return;
+                      const blob = await res.blob();
+                      window.open(URL.createObjectURL(blob), "_blank");
+                    }}
+                    className="mt-2 text-xs text-sky-400 hover:underline"
+                  >
+                    📄 gerar proposta em PDF
+                  </button>
                 )}
                 {l.status === "fechado" && (
                   <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-950/40 p-2">

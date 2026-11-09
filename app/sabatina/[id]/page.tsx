@@ -7,6 +7,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import type { SabatinaContext, ChatTurn } from "@/lib/llm";
 import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
+import VoiceSabatina from "@/components/VoiceSabatina";
 
 interface Msg {
   role: "user" | "model";
@@ -266,6 +267,10 @@ export default function Sabatina({
       <div className="mb-6">
         <p className="font-mono text-xs text-emerald-400">SABATINA DE BANCA</p>
         <h1 className="text-xl font-bold">{opp.name}</h1>
+      </div>
+
+      <div className="mb-4">
+        <VoiceSabatina opportunityId={id} profileEmail={email} />
       </div>
 
       <div className="flex flex-1 flex-col gap-4">

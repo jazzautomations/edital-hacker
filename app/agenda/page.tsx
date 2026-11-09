@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import type { Profile } from "@/lib/types";
+import { calcCachet } from "@/lib/cachet";
 
 const NEXT: Record<string, string> = { marcado: "feito", feito: "pago" };
 const STYLE: Record<string, string> = {
@@ -39,6 +40,17 @@ export default function Agenda() {
   const remove = useMutation(api.gigs.remove);
 
   const [form, setForm] = useState({ title: "", venue: "", date: "", fee: "" });
+  const [calc, setCalc] = useState({ musicians: "3", pay: "400", km: "100", tech: "0", lodge: "0", extra: "0" });
+  const [showCalc, setShowCalc] = useState(false);
+
+  const cachet = calcCachet({
+    musicians: Number(calc.musicians) || 1,
+    payPerMusician: Number(calc.pay) || 0,
+    transportKm: Number(calc.km) || 0,
+    techCost: Number(calc.tech) || 0,
+    lodging: Number(calc.lodge) || 0,
+    extraCosts: Number(calc.extra) || 0,
+  });
 
   if (!profile) {
     return (
@@ -100,6 +112,61 @@ export default function Agenda() {
           </p>
           <p className="text-xs text-neutral-500">recebido</p>
         </div>
+      </section>
+
+      <section className="mb-4 rounded-2xl border border-neutral-800 p-5">
+        <button
+          onClick={() => setShowCalc(!showCalc)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <span className="text-sm font-semibold text-emerald-400">
+            💰 Não chute seu cachê — calcula o piso
+          </span>
+          <span className="font-mono text-xs text-neutral-500">{showCalc ? "−" : "+"}</span>
+        </button>
+        {showCalc && (
+          <div className="mt-4">
+            <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
+              {[
+                ["músicos", "musicians"], ["R$/músico", "pay"], ["km total", "km"],
+                ["som/técnico", "tech"], ["hospedagem", "lodge"], ["extras", "extra"],
+              ].map(([label, key]) => (
+                <label key={key} className="flex flex-col gap-1">
+                  <span className="font-mono text-[10px] uppercase text-neutral-500">{label}</span>
+                  <input
+                    className="rounded-lg bg-neutral-900 px-3 py-2 text-sm"
+                    inputMode="numeric"
+                    value={calc[key as keyof typeof calc]}
+                    onChange={(e) => setCalc({ ...calc, [key]: e.target.value.replace(/[^\d.]/g, "") })}
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase text-neutral-500">piso (custa isso)</p>
+                <p className="text-xl font-bold text-red-400">R$ {cachet.floor.toLocaleString("pt-BR")}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] uppercase text-neutral-500">pede isso</p>
+                <p className="text-xl font-bold text-emerald-400">R$ {cachet.suggested.toLocaleString("pt-BR")}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] uppercase text-neutral-500">teto da faixa</p>
+                <p className="text-xl font-bold text-neutral-300">R$ {cachet.ceiling.toLocaleString("pt-BR")}</p>
+              </div>
+              <p className="text-xs text-neutral-500">
+                ≈ R$ {cachet.perMusician.toLocaleString("pt-BR")} por músico · abaixo do piso você paga pra tocar
+              </p>
+              <button
+                onClick={() => setForm({ ...form, fee: String(cachet.suggested) })}
+                className="ml-auto rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-black"
+              >
+                usar R$ {cachet.suggested.toLocaleString("pt-BR")} ↓
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="mb-8 rounded-2xl border border-neutral-800 p-5">
@@ -167,6 +234,15 @@ export default function Agenda() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <a
+                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(g.title)}&dates=${g.date.replaceAll("-", "")}/${g.date.replaceAll("-", "")}${g.venue ? `&location=${encodeURIComponent(g.venue)}` : ""}&details=${encodeURIComponent(`Marcado via Manager${g.fee ? ` · cachê R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-sky-400 hover:bg-neutral-700"
+                  title="Adicionar ao Google Calendar"
+                >
+                  📅 cal
+                </a>
                 <span className={`font-mono text-xs uppercase ${STYLE[g.status]}`}>{g.status}</span>
                 {NEXT[g.status] && (
                   <button

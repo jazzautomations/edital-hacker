@@ -14,9 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Manager — o empresário de IA do artista independente",
+  title: "Manager — o coach de IA do trabalhador da arte",
   description:
-    "Encontra editais, shows e prêmios que aceitam você, sabatina sua proposta como uma banca e organiza sua carreira.",
+    "Radar de editais, sabatina contra a banca real, prospecção de gigs e agenda de cachês: o coach de IA que organiza em reais a renda de músicos, produtores e trabalhadores da arte.",
+  openGraph: {
+    title: "Manager — o coach de IA do trabalhador da arte",
+    description:
+      "Radar de editais, sabatina contra a banca real, prospecção de gigs e agenda de cachês. Você cuida da arte; o Manager cuida da renda.",
+    locale: "pt_BR",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
