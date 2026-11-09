@@ -38,16 +38,23 @@
 
 ## Tracks e prêmios de patrocinador
 
-| Patrocinador | O que quer ver | Vale mirar? |
-|---|---|---|
-| Convex | US$ 6k **em dinheiro** (único cash) — produto rodando em Convex de verdade | **Sim** — já é nosso backend; deploy E2E é P0 |
-| Firecrawl | US$ 50k créditos — uso real de scrape/agent | Sim — agent cobrindo fontes WAF/municipais |
-| Resend | US$ 10k×3 — email transacional | Sim — alertas deduplicados |
-| AbacatePay | taxa reduzida R$ 500k — Pix real; **benefício já durante o hack** | Sim — checkout ao vivo na demo |
-| Cognition/Devin | US$ 20k — uso de agente | Sim — somos nós |
-| WorkOS | finalistas — auth | Sim — fase 2 |
-| Capivarafy | consultoria captação não-diluitiva (PIPE/FINEP) | Sim — **nosso produto É o domínio deles** |
-| Puentes | fast-track — "just doing things" | Consequência de shippar |
+Fonte: regulamento item 10.2–10.3 (lido 2026-11).
+
+| Patrocinador | Prêmio (item 10.3) | Perk p/ participante* | Vale mirar? |
+|---|---|---|---|
+| Convex | US$ 6k **em dinheiro** (3k/2k/1k) — único cash | — | **Sim** — já é nosso backend |
+| Firecrawl | US$ 50k créditos (25k/15k/10k) | 5.000 créditos p/ integrante | Sim — agent cobrindo fontes WAF |
+| Nvoip | Pro 12 usuários 3 anos + número virtual c/ DDD 3 anos (R$ 35.532/time) + créditos R$ 3k/2k/1k | 3 meses Pro p/ 1 usuário (contas novas) | Sim — **lembretes no WhatsApp/SMS** = feature core |
+| Cognition/Devin | US$ 20k créditos (10k/6k/4k) | cupom US$ 20 Devin | Sim — somos nós |
+| Resend | US$ 10k créditos ×3 times, 12 meses | 3 meses Pro p/ finalistas | Sim — alertas deduplicados |
+| AbacatePay | taxa reduzida Pix/cartão: R$ 300k/150k/50k top3 + R$ 10k p/ menção honrosa, por até 24m pós-lançamento | taxa reduzida já durante o hack | Sim — checkout ao vivo na demo |
+| WorkOS | pacote auth domínio próprio 12m (US$ 1.188) p/ cada finalista | — | Sim — auth fase 2 |
+| Capivarafy | consultoria captação não-diluitiva até US$ 30k em taxas isentas ×3 (sem CNPJ p/ iniciar) | — | Sim — **nosso produto É o domínio deles** |
+| Globalfy | LLC/C Corp grátis (US$ 998–1.308) ×5 + cupons US$ 200–500 p/ finalistas | cupom p/ finalistas | Não — irrelevante pro MVP |
+| Jumpstart | até 4 vistos O-1/J-1 (US$ 40k) p/ 1º lugar | — | Não — irrelevante pro MVP |
+| Puentes | fast-track última etapa coorte p/ 1º (sem vaga garantida) | — | Consequência de shippar |
+
+\* **Perks de participante destravam quando o rascunho do projeto é aprovado no painel** (por ordem de aprovação, até 2.000 participantes). Ação: submeter rascunho CEDO → destrava Firecrawl 5k + Nvoip 3m + Devin US$20.
 
 ## Restrições e peculiaridades
 
@@ -77,6 +84,6 @@
 ## `[VERIFICAR]`
 
 - [ ] Elegibilidade da Laura (residência BR ou visto) — confirmar antes de registrar no time
-- [ ] Perks de sponsor no painel do time (créditos de participante?) — verificar em hackbrasil.com/painel
+- [x] Perks de sponsor no painel: **sim e dependem de rascunho aprovado** — Firecrawl 5k créditos, Nvoip 3m Pro, Devin US$20. Submeter rascunho cedo = destravar chaves grátis (item 10.3)
 - [ ] Jurados oficiais (anunciados até 30/nov) — checar quando sair e adaptar pitch
 - [ ] Evento exato de downgrade de assinatura da AbacatePay após esgotar retryPolicy — validar em sandbox

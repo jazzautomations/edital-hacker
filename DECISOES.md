@@ -123,3 +123,20 @@
 - **Fonte**: regulamento 5.2 + áudio do fundador (05/11, creator economy) + teardown dos funis (Instagram para Músicos, módulo divulgação do NCM).
 - **Afeta**: roadmap pós-hack — EPK/material já no MVP (é documento, não marketing); fase 2 = conteúdo/calendário/anúncios.
 - **Reversível?**: Sim — se o regulamento for reinterpretado, volta pro escopo.
+
+## D016 — 2026-11-09 — Notificações multi-canal: Evolution na demo, Nvoip na produção
+
+- **Decisão**: Lembretes do coach saem por `lib/notify.ts` com canais plugáveis: **WhatsApp via Evolution API** (instância `jazz` já no ar — texto livre, zero aprovação Meta, manda pro número do time na demo) + **Nvoip** para SMS `/v3/sms`, torpedo de voz TTS (`/v3/torpedo/voice` — "o coach te liga"), OTP e WhatsApp oficial WABA quando o template aprovar. O dispatch vive em `POST /api/notify` no Next porque a Evolution está na tailnet (Convex cloud não alcança); o cron `alerts.run` chama a rota com `NOTIFY_SECRET`.
+- **Motivo**: Nvoip é sponsor com prêmio (item 10.3: Pro 12u/3anos + R$3k/2k/1k créditos; 3 meses Pro p/ participante com rascunho aprovado) e cobre o que Evolution não faz (SMS, voz, OTP, oficial). Evolution destrava a demo de WhatsApp HOJE — template Meta leva dias. Artista vive no zap: lembrete de prazo no bolso é a feature que o usuário sente.
+- **Fonte**: docs Nvoip v3 (github.com/Nvoip/nvoip-api-examples, api.nvoip.com.br/v3 OAuth) + regulamento 10.3 + pesquisa de sponsors 09/11.
+- **Afeta**: schema (`profiles.phone`, `alertLog.channel`), `lib/nvoip.ts`, `lib/notify.ts`, `app/api/notify`, `convex/alerts.ts` (deadline_phone), `.env.example`.
+- **Reversível?**: Sim — canal é env var; sem chaves o notify é no-op.
+- **Atenção regulamento 6.9**: demo só dispara pra número do próprio time.
+
+## D017 — 2026-11-09 — Radar vira vigilância: Firecrawl Monitoring + veredito da voz no pipeline
+
+- **Decisão**: (1) **Firecrawl `/v2/monitor`** — monitors de crawl nos portais bloqueados (DF/MA/PE/SP) + search web-wide com goal LLM, notificando `POST /webhooks/firecrawl` no Convex que faz upsert em `opportunities` (externalId=url → dedup grátis). Setup via `convex/monitors.ts` internal action. (2) **Agora `llm.tools`** — banca de voz chama `submit_verdict` → `POST /api/voice-verdict` persiste `sabatinaSessions` + `pipeline.sabatinaScore` (o veredito da voz cai no kanban igual ao texto). (3) **Digest semanal** — cron `weekly-digest` segunda 12h UTC envia "sua semana" por Resend batch (prazos 7d, leads parados, gigs, a receber). (4) **Artefatos canônicos** — EPK página web `/epk` (ordem booker: quem→ouça→assista→bio→agenda→contato, sem cachê), contrato 11 cláusulas + checklist de negociação em anexo.
+- **Motivo**: Monitoring é feature recém-lançada do Firecrawl — uso de ponta num critério de 25% (implementação técnica) e o presidente da comissão é CTO da Firecrawl. Voice-verdict fecha o gap T053 (voz não gravava nada). Digest é o "check-in semanal" que mentoria cobra caro. Artefatos seguem as estruturas canônicas pesquisadas (Anexo V PNAB, LL Cultural, EPK bybooker).
+- **Fonte**: pesquisa sponsors + artefatos 09/11 (fontes primárias listadas nos relatórios).
+- **Afeta**: `convex/monitors.ts`, `convex/http.ts`, `convex/digest.ts`, `convex/crons.ts`, `lib/firecrawl.ts` (createMonitor), `app/api/voice-session`, `app/api/voice-verdict`, `app/epk`, `app/api/contrato`, `app/agenda` (check-in in-app).
+- **Reversível?**: Sim — tudo aditivo, nada remove o que funciona.

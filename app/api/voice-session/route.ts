@@ -97,6 +97,32 @@ export async function POST(req: Request) {
           failure_message: "Tive um problema técnico — pode repetir?",
           max_history: 10,
           params: { model: process.env.AGORA_LLM_MODEL ?? "gpt-4o-mini" },
+          // Tool calling: quando a banca encerra, o agente chama submit_verdict
+          // → /api/voice-verdict persiste score+gaps no pipeline (mesmo lugar do texto).
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "submit_verdict",
+                description:
+                  "Encerra a sabatina e grava o parecer oficial. Chame quando tiver avaliado a proposta contra a rubrica.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    score: { type: "number", description: "Nota 0-100" },
+                    summary: { type: "string", description: "Parecer em 2-3 frases" },
+                    gaps: { type: "array", items: { type: "string" }, description: "Lacunas encontradas" },
+                    missingDocs: { type: "array", items: { type: "string" }, description: "Documentos exigidos que faltam" },
+                  },
+                  required: ["score", "summary", "gaps", "missingDocs"],
+                },
+              },
+              server: {
+                url: `${process.env.APP_URL ?? "http://localhost:3000"}/api/voice-verdict?opp=${opportunityId}&email=${encodeURIComponent(profileEmail)}`,
+                method: "POST",
+              },
+            },
+          ],
         },
         tts: { credential_mode: "managed" },
       },

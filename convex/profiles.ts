@@ -23,6 +23,12 @@ export const upsert = mutation({
     uf: v.optional(v.string()),
     bio: v.optional(v.string()),
     portfolioUrl: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    tagline: v.optional(v.string()),
+    city: v.optional(v.string()),
+    photoUrl: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    musicLinks: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db

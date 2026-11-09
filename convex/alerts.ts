@@ -84,6 +84,26 @@ export const run = internalAction({
             `<p>O edital <b>${o.name}</b> (${o.sourceName}) fecha inscrições em <b>${o.registrationTo?.slice(0, 10) ?? "em breve"}</b> e tá no seu pipeline.</p><p><a href="${o.sourceUrl}">Abrir edital</a></p>`
           );
           sent.push({ kind: "deadline", email: profile.email, opp: o.name, ...r });
+
+          // Canal de bolso: WhatsApp (Evolution) → SMS → torpedo de voz se ≤3 dias.
+          // A rota /api/notify roda no Next (Evolution tá na tailnet).
+          if (profile.phone) {
+            const msg =
+              `⚡ Manager: faltam poucos dias pro edital ${o.name} (${o.sourceName}) — ` +
+              `inscrições até ${o.registrationTo?.slice(0, 10) ?? "em breve"}. Abre no app e bora.`;
+            const appUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+            if (appUrl) {
+              const nr = await fetch(`${appUrl}/api/notify`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-notify-secret": process.env.NOTIFY_SECRET ?? "",
+                },
+                body: JSON.stringify({ phone: profile.phone, text: msg, urgent: true }),
+              }).then((res) => res.json()).catch(() => null);
+              sent.push({ kind: "deadline_phone", phone: profile.phone, channel: nr?.channel, opp: o.name });
+            }
+          }
         }
       }
 

@@ -34,6 +34,14 @@ export default function Agenda() {
     api.gigs.listForProfile,
     profile ? { profileId: profile._id as any } : "skip"
   ) as Gig[] | undefined;
+  const leads = useQuery(
+    api.leads.listForProfile,
+    profile ? { profileId: profile._id as any } : "skip"
+  ) as { _id: string; name: string; status: string; updatedAt: number }[] | undefined;
+  const expiring = useQuery(
+    api.documents.expiringDocs,
+    profile ? { profileId: profile._id as any, withinDays: 30 } : "skip"
+  ) as { _id: string; name: string; expiresAt?: string }[] | undefined;
 
   const add = useMutation(api.gigs.add);
   const setStatus = useMutation(api.gigs.setStatus);
@@ -83,6 +91,15 @@ export default function Agenda() {
     .reduce((s, g) => s + (g.fee ?? 0), 0);
   const recebido = sorted.filter((g) => g.status === "pago").reduce((s, g) => s + (g.fee ?? 0), 0);
 
+  // Check-in do coach: a semana em números — o ritual que mentoria cobra caro.
+  const today = new Date().toISOString().slice(0, 10);
+  const in7d = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const weekGigs = sorted.filter((g) => g.date >= today && g.date <= in7d && g.status !== "cancelado");
+  const overdue = sorted.filter((g) => g.date < today && g.status !== "pago" && g.status !== "cancelado" && g.fee);
+  const staleLeads = (leads ?? []).filter(
+    (l) => ["novo", "contatado", "respondeu"].includes(l.status) && l.updatedAt < Date.now() - 5 * 86400000
+  );
+
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-10">
       <header className="mb-8 flex items-end justify-between">
@@ -98,6 +115,28 @@ export default function Agenda() {
           <Link href="/pipeline" className="text-emerald-400 hover:underline">Pipeline →</Link>
         </div>
       </header>
+
+      {(weekGigs.length > 0 || overdue.length > 0 || staleLeads.length > 0 || (expiring?.length ?? 0) > 0) && (
+        <section className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+          <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-emerald-400">
+            ⚡ O coach olhou tua semana
+          </h2>
+          <ul className="flex flex-col gap-2 text-sm text-neutral-300">
+            {weekGigs.map((g) => (
+              <li key={g._id}>🎤 <b>{g.date}</b> — {g.title}{g.venue ? ` · ${g.venue}` : ""}{g.fee ? ` · R$ ${g.fee.toLocaleString("pt-BR")}` : ""}</li>
+            ))}
+            {overdue.map((g) => (
+              <li key={g._id} className="text-amber-400">💸 {g.title} foi dia {g.date} e R$ {g.fee?.toLocaleString("pt-BR")} ainda não tá como pago — cobra.</li>
+            ))}
+            {(expiring ?? []).map((d) => (
+              <li key={d._id} className="text-red-400">📄 {d.name} vence {d.expiresAt?.slice(0, 10)} — renova antes do próximo edital.</li>
+            ))}
+            {staleLeads.slice(0, 3).map((l) => (
+              <li key={l._id}>📞 {l.name} ({l.status}) parado há {Math.floor((Date.now() - l.updatedAt) / 86400000)}d — follow-up.</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mb-8 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-neutral-800 p-4 text-center">

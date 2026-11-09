@@ -139,3 +139,43 @@ export async function discoverLeads(
   }
   return json?.data?.leads ?? [];
 }
+
+export interface MonitorTarget {
+  type: "scrape" | "crawl" | "search";
+  urls?: string[];
+  url?: string;
+  query?: string;
+}
+
+/**
+ * /v2/monitor — vigilância contínua. O radar deixa de ser "puxar fontes"
+ * e vira "a web inteira avisa quando aparece edital novo".
+ * Targets: scrape (URLs), crawl (site), search (resultados novos na web).
+ * Notifica via webhook (monitor.page) só quando o goal LLM julga relevante.
+ */
+export async function createMonitor(opts: {
+  name: string;
+  goal: string;
+  targets: MonitorTarget[];
+  webhookUrl: string;
+  webhookSecret: string;
+  schedule?: string;
+}): Promise<{ id?: string; status: number }> {
+  const res = await fetch(`${BASE}/monitor`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: opts.name,
+      goal: opts.goal,
+      schedule: { text: opts.schedule ?? "every 6 hours", timezone: "America/Sao_Paulo" },
+      targets: opts.targets,
+      webhook: {
+        url: opts.webhookUrl,
+        headers: { "x-webhook-secret": opts.webhookSecret },
+        events: ["monitor.page", "monitor.check.completed"],
+      },
+    }),
+  });
+  const json = await res.json().catch(() => ({}));
+  return { id: json?.data?.id ?? json?.id, status: res.status };
+}
