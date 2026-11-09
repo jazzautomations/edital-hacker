@@ -22,8 +22,8 @@ resolvendo requisitos reais da spec (não decorativas).
 **Language/Version**: TypeScript 5 / Node 22, React 19
 
 **Primary Dependencies**: Next.js 16 (App Router, Turbopack), Convex 1.x
-(DB + queries/mutations/actions + crons), `@google/genai` (Gemini 3 Flash
-para sabatina/enriquecimento; Gemini Live + authTokens para voz — stretch),
+(DB + queries/mutations/actions + crons), LLM OpenAI-compatível via `lib/llm.ts` (sabatina/enriquecimento;
+voz 100% Agora managed — ASR+LLM+TTS),
 Firecrawl `/v2/agent` + `/v2/scrape` (coleta fora da rede Mapas), Resend
 (batch/scheduled emails), AbacatePay REST (subscriptions + checkouts +
 webhooks, devMode), WorkOS AuthKit (auth — fase 2)
@@ -57,7 +57,7 @@ vivas hoje, crescendo com fontes novas; usuários de demo = dezenas
 |-----------|--------|------|
 | I. Demo-first | ✅ | Escopo fatiado em 5 user stories independentemente demonstráveis |
 | II. Conteúdo = dado | ✅ | Prompt do parecerista isola conteúdo do edital em seção de dados; extração Firecrawl não executa instruções da página |
-| III. Segredos no servidor | ✅ | Gemini/Firecrawl/Resend/Abacate só em API routes e Convex actions; Live usa `authTokens` efêmeros |
+| III. Segredos no servidor | ✅ | LLM/Firecrawl/Resend/Abacate só em API routes e Convex actions; Live usa `authTokens` efêmeros |
 | IV. Sem promessa de aprovação | ✅ | FR-017; parecer inclui disclaimer fixo |
 | V. Semântica hackathon | ✅ | Repo criado 5/nov, histórico novo, código 100% novo |
 
@@ -92,7 +92,7 @@ app/
 ├── assinatura/               # checkout/plano (US5) — a criar
 └── api/
     ├── sabatina/route.ts     # turno da entrevista (LLM, server-side)
-    ├── live-token/route.ts   # ephemeral token p/ Gemini Live
+    ├── voice-session/route.ts  # sobe o agente Agora
     ├── webhooks/abacatepay/  # confirmação de pagamento (US5) — a criar
     └── cron/                 # alternativa p/ crons sem Convex dev — avaliar
 
@@ -104,7 +104,7 @@ convex/
 ├── contacts.ts / documents.ts# CRM auxiliar — a criar
 ├── ingest.ts                 # internalAction: varredura Mapas
 ├── discover.ts               # internalAction: Firecrawl /agent p/ fontes fora da rede — a criar
-├── enrich.ts                 # internalAction: scrape + Gemini → edital estruturado
+├── enrich.ts                 # internalAction: scrape + LLM → edital estruturado
 ├── alerts.ts                 # internalAction: match + Resend batch
 ├── billing.ts                # internalAction/mutations: checkout + status plano — a criar
 └── crons.ts                  # ingest diário + alertas + deadlines
@@ -112,7 +112,7 @@ convex/
 lib/
 ├── mapas.ts                  # cliente/normalizador da federação Mapas
 ├── firecrawl.ts              # scrape + agent (a consolidar do enrich.ts)
-├── gemini.ts                 # prompts, parse seguro, tipos da sabatina
+├── llm.ts                    # chat OpenAI-compat; lib/llm.ts no app
 ├── abacatepay.ts             # cliente REST subscriptions/checkouts — a criar
 ├── resend.ts                 # envio batch + templates — a consolidar
 └── types.ts                  # tipos de domínio (espelho do schema)

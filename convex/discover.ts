@@ -8,6 +8,10 @@ import { discoverOpportunities, discoverLeads } from "../lib/firecrawl";
 const BLOCKED_SOURCES = [
   { name: "Mapa Cultural do DF", baseUrl: "https://mapa.cultura.df.gov.br" },
   { name: "Mapa Cultural do Maranhão", baseUrl: "https://ma.mapas.cultura.gov.br" },
+  // WAF 403 confirmado 08/dez — API Mapas existe mas bloqueia non-browser
+  { name: "Rede das Artes (Funarte)", baseUrl: "https://rededasartes.cultura.gov.br" },
+  { name: "Cultura Viva", baseUrl: "https://culturaviva.cultura.gov.br" },
+  { name: "Mapa Cultural BH", baseUrl: "https://mapaculturalbh.pbh.gov.br" },
 ];
 
 export const discoverSource = internalAction({

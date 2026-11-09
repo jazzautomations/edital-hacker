@@ -81,14 +81,14 @@ Playwright (custo de manutenção alto demais pro prazo).
 
 ## Sabatina de banca (US2, FR-008..FR-010)
 
-### Decisão: Gemini 3 Flash via `@google/genai`, JSON mode com schema
+### Decisão (atualizada): LLM OpenAI-compatível via `lib/llm.ts` — Gemini removido
 
 **Rationale**: turnos de entrevista precisam de raciocínio + voz PT-BR
 natural na versão Live. Saída estruturada (`responseMimeType:
 "application/json"` + schema de parecer) elimina parser frágil — aprendizado
 do protótipo anterior que precisava de JSON-repair.
 
-### Decisão: voz via Gemini Live com `authTokens` efêmeros (stretch)
+### Decisão (atualizada): voz via Agora managed (ASR+LLM+TTS) — Gemini Live descartado
 
 **Rationale**: `ai.authTokens.create()` emite token de uso único com
 constraints (modelo, config) embutidos — o browser conecta direto no
@@ -156,9 +156,9 @@ Next API route + Vercel Cron se o deploy Convex não sair a tempo.
 
 ## LLM para enriquecimento (FR-004)
 
-### Decisão: Gemini com schema de edital estruturado sobre markdown do Firecrawl
+### Decisão (atualizada): LLM agnóstico com schema de edital sobre markdown do Firecrawl
 
-Scrape → markdown → Gemini extrai `{summary, eligibility, disqualifiers[],
+Scrape → markdown → LLM extrai `{summary, eligibility, disqualifiers[],
 requiredDocs[], rubric[], deadlines[]}` com JSON mode. Conteúdo dentro de
 bloco `<edital>` (constituição II). Fallback: sem `FIRECRAWL_API_KEY`,
 usa `longDescription` da API Mapas como fonte do digest.
@@ -170,3 +170,125 @@ usa `longDescription` da API Mapas como fonte do digest.
 - **Escrever a proposta pela artista** → posicionamento deliberado é
   "preparar", não "ghost-write"; diferencia de todos os concorrentes e
   casa melhor com o júri técnico.
+
+---
+
+# Landscape competitivo (pesquisa 08/dez, fontes primárias de pricing)
+
+**Tese validada com nuance**: ninguém no mundo — e menos ainda no Brasil —
+junta num agente só radar de editais + sabatina interativa + prospecção de
+leads comerciais + agenda de cachês + EPK/contrato/rider + prestação de
+contas + digest. Mas o pitch "ninguém faz isso" exige precisão: já existe
+ecossistema parcial dos dois lados.
+
+## Os 3 concorrentes mais perigosos + respostas
+
+| Concorrente | O que tem | O que falta | Nossa resposta |
+|---|---|---|---|
+| **Clube Emma** (clubemma.com.br) | match+escrita+"modo parecerista"+EmmaPresta (prestação de contas)+Emmatrocínio | R$700–4.000/ano infoproduto; parecerista revisa o texto que ela mesma escreveu; zero renda privada (gigs/cachês/leads) | "Emma escreve seu projeto; a gente empresaria sua carreira." Sabatina *interroga* o artista (e em voz — ninguém tem) |
+| **Projeto Contemplado** (projetocontemplado.com.br) | radar "aceita você" + IA lê edital + escreve junto; freemium | termina na inscrição — copiloto por-edital, sem pipeline permanente/docs/cachês | "De assistente de inscrição a empresário permanente." |
+| **By Booker** (bybooker.com, João Pessoa) | DPK+agenda pública+financeiro de cachê+rider/contrato+marketplace | só música ao vivo; lead **passivo** (marketplace); zero editais/fomento | Renda mista real (edital+gig+aula+patrocínio) + agente que **sai prospectar** (Firecrawl) |
+
+## Menções para Q&A do júri
+
+- **OCTVE** (octve.io, $50/mo): prova global do modelo "workspace do negócio
+  do artista" — zero Brasil/fomento, 5–10× nosso preço.
+- **RadarEdital / FAROL / Edital Cultural**: radar = feature commoditizada
+  (deve ser grátis mesmo). FAROL tem "Sonda" (alerta por projeto descrito) —
+  benchmark de cobertura: medir se nossos 110+ editais/6 fontes superam.
+- **MNGRS.AI** (€29,99/mo): claim "1º AI artist manager" — é marketing de
+  release, excluído pela trilha (5.2), em EUR.
+- **Audo** (career coach genérico): descontinuado ~set/2026 — dado de que
+  coach genérico morre; verticalização profunda é a resposta.
+- **Capivarafy** (patrocinadora): validação do mercado, não concorrente.
+- ⚠️ Colisão de nome: radaredital.com.br é produto de licitações PNCP B2B —
+  não usar "Radar Edital" como nome.
+
+## Diferencial defensável (ordem de força)
+
+1. **Duas rendas num pipeline só**: fomento público E trabalho privado —
+   ninguém cruza.
+2. **Sabatina como treino** (interrogação interativa, por voz, citando
+   rubrica real) vs. revisão de documento.
+3. **Agente pró-ativo**: digest, alertas multi-canal (email+WA+SMS+voz),
+   monitor Firecrawl contínuo vs. ferramentas passivas.
+4. **Preço Pix/microtransação** (R$9,90 avulso) vs. R$700–4.000/ano.
+5. **Moat de dados**: histórico pipeline+docs+pareceres que nenhum
+   agregador gratuito acumula.
+
+## Ação tática sugerida
+
+Cadastrar conta grátis em FAROL + RadarEdital + Projeto Contemplado no dia
+da demo prep para medir cobertura real (SC-001 mira 100+ editais/5+ fontes).
+
+---
+
+# Dores reais dos trabalhadores da arte (pesquisa 08/dez, 30+ fontes primárias)
+
+## Números que enquadram o pitch
+
+- **2,7 mi** de trabalhadores criativos informais; 47,3% dos CNPJs de música
+  são MEI (ANAFIMA — música = R$116 bi/ano)
+- **Autoempresariado fatura R$600/mês vs. R$18.500/mês com escritório**;
+  71,4% dos escritórios faturam >R$20k vs. 36,4% dos independentes
+  (Pesquisa Empresariamento Artístico/Anita Carvalho 2021) — *o argumento
+  central: o coach é o "escritório" que o artista não pode pagar*
+- Ranking de dores (Vortex/Abramus, 1.250 inscritos): divulgação 38% ·
+  gestão/estratégia 22% · networking 21% · shows 21% · renda 21% —
+  **e 62% já têm 5+ anos de carreira** (não é problema de novato)
+- **63/83 projetos indeferidos** no Linc Sorocaba — 43 por certidão de
+  contador que o edital nem explicava (morte por formalidade, não mérito)
+- 35,5% dos criativos temem que IA substitua seu emprego (Deck 2025/26)
+
+## A dor #1 transversal: DINHEIRO QUE NÃO ENTRA
+
+Calote de prefeitura (Carnaval BH ~100 trabalhadores 2 meses sem pagar),
+atraso institucionalizado ("no próximo mês a gente compensa"), cachê de
+R$60/banda ("tem outra banda na fila"), pay-to-play. Edital: juridiquês +
+plataforma quebrada + órgão que não responde → desistência antes da
+inscrição. Quem ganha pode perder: prestação não feita → dívida ativa
+(Secel-MT notificou 44).
+
+## O que já pagam (âncoras de preço)
+
+| Solução atual | Preço | O que odeiam |
+|---|---|---|
+| Empresário/booker | 15–25% do cachê | caro, só pega quem já tem público, cobra % sem trazer show |
+| Mentoria "viver de música" | R$2.416+ (Hotstage) | infoproduto genérico, "já fui queimado" |
+| Elaboração de projeto | R$1.200 + 8–10% do captado | escreve POR você — não te prepara |
+| Assessoria de imprensa | R$1.200–4.800/mês; EPK avulso R$500 | fora do orçamento |
+| Superprof/Getninjas | lead pago ou taxa no ALUNO | taxa sem entregar aluno de verdade |
+
+## Linguagem real para copy
+
+"cachê" · "trampo" · "fazer um corre" · "fechar o mês" · "quem tem QI tem
+tudo" · "agenda cheia ≠ bolso cheio" · "bebida não é cachê" · "pagar pra
+tocar" · "no próximo mês a gente compensa" · "cara de paisagem" ·
+"1/2 portaria" · "aula dada, aula paga" · "pejotizado"
+❌ evitar: "empoderamento", "jornada", "ecossistema"
+
+## Objeções a IA + antídotos (design)
+
+1. "Robô não sabe como é a cena aqui" → coach cita rubrica real do edital,
+   nomes de leads e cachês do próprio histórico
+2. "ChatGPT de graça já dá conselho genérico" → conselho específico com
+   dados da carreira (RAG) > genérico
+3. "IA na música é embuste" (campanha UBC "quem usa paga") → "a IA não cria
+   contigo — faz a parte que nenhum artista gosta: edital, doc, cobrança";
+   dados do usuário nunca treinam modelo
+4. "Já paguei curso que prometia viver de música" → prova antes de pagar:
+   radar grátis + sabatina R$9,90 avulsa
+5. Técnico/produtor se sente invisível ("quem monta o palco também é
+   trabalhador da arte") → linguagem de backoffice/diária inclui metade da
+   cadeia que "app de artista" exclui
+
+## Casos de uso matadores por persona
+
+- **Músico/banda**: cachê piso por tipo de gig + pacote com sinal + edital
+  que aceita PF
+- **DJ/produtor**: regra de cancelamento/sinal (data de DJ é "estoque" —
+  sábado cancelado = fim de semana perdido)
+- **Professor**: política de falta/reposição pronta pro WhatsApp do aluno +
+  precificação por custo real (particular R$91,82/h vs. pejotizado R$21,81/h)
+- **Técnico/produção**: pipeline de docs + livro-caixa de prestação +
+  alerta de recebimento (o calote institucional documentado)

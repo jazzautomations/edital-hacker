@@ -67,7 +67,7 @@ Ordem = força no julgamento: **execução** (desempate oficial, jurado não tes
 
 > Por baixo: **ingestão federada** da API pública Mapas — a mesma API em mais de quarenta instâncias — com normalização de formatos heterogêneos, deduplicação e isolamento de falha: uma fonte cai, o catálogo fica de pé. Onde tem firewall, entra **agente de scrape**.
 >
-> **Convex** sustenta banco, realtime e quatro rotinas agendadas. A sabatina também roda **por voz**: a Agora transporta o áudio; o cérebro — prompt e rubrica — fica no nosso servidor, num endpoint OpenAI-compatível que chama o Gemini.
+> **Convex** sustenta banco, realtime e quatro rotinas agendadas. A sabatina também roda **por voz**: a Agora transporta o áudio; o cérebro — prompt e rubrica — fica no nosso servidor, num endpoint OpenAI-compatível (LLM agnóstico — OpenAI/DeepSeek/o que tiver crédito).
 >
 > E o webhook de pagamento é idempotente: confirmou, ativou.
 
@@ -149,13 +149,19 @@ Ninguém garante — e o produto diz isso na tela: o parecer declara simulação
 **5. "Quem paga?"**
 O próprio artista: R$9,90 pra destravar a sabatina de um edital ou R$49–99/mês — ancorado no booker de 15–20% do cachê e nas consultorias de R$2–5 mil. WTP é a premissa fraca assumida: estamos validando com concierge pago real (D010).
 
-**6. "Por que Agora e não Gemini Live?"**
-Transporte RTC maduro + ASR/TTS managed nos créditos do usuário — e o cérebro fica nosso: `/api/voice-llm` é OpenAI-compatível, serve Gemini com prompt e rubrica no servidor (a Agora só vê voz). Gemini Live segue implementado como rota alternativa (`/api/live-token`).
+**6. "Por que Agora?"**
+Transporte RTC maduro + ASR/TTS/LLM managed nos créditos do usuário — e o cérebro fica nosso: system prompt, rubrica do edital e a tool `submit_verdict` que grava a nota no pipeline são nossos; a Agora só transporta voz.
 
 **7. "Qual a diferença pro Projeto Contemplado?"**
-Eles escrevem a proposta POR você e param no PDF (~59 editais, curadoria). A gente prepara o artista contra a rubrica real e segue a carreira inteira: 110 editais federados, prospecção de gigs, agenda de cachês, pipeline até prestação de contas.
+É o wedge mais próximo: radar "que aceita você" + IA que lê o edital + escreve junto — mas termina na inscrição: copiloto por-edital. A gente é a relação contínua: pipeline que sobrevive ao edital, docs com vencimento, alertas deduplicados, e depois da aprovação ainda tem execução e prestação de contas; fora do edital há gigs, cachês e leads. "De assistente de inscrição a empresário permanente."
 
-**8. "Tem dado pessoal real na demo?"**
+**8. "E o Clube Emma? Tem parecerista e prestação de contas."**
+O mais completo no eixo edital — e é infoproduto anual de R$700–4.000 cujo "modo parecerista" revisa o texto que a própria IA escreveu. A gente sabatina o *artista* (interrogação interativa, inclusive por voz) e empresaria a *carreira*: Emma não toca renda privada — zero agenda de cachês, zero leads de casas/marcas. E o preço: R$9,90 avulso vs. assinatura anual.
+
+**9. "E o By Booker? Já tem agenda, cachê, EPK, rider."**
+Cobre bem o eixo música-ao-vivo — mas o lead é *passivo* (o contratante te acha no marketplace) e não existe fomento: zero editais, zero sabatina, zero prestação de contas. A gente cobre a renda mista real (edital+gig+aula+patrocínio) e o agente **sai prospectar** via Firecrawl em vez de esperar ser achado.
+
+**10. "Tem dado pessoal real na demo?"**
 Zero — a persona é sintética e declarada (FR-018); só dados públicos de editais são reais. E conteúdo vindo de edital é tratado como dado inerte: prompt injection vira flag no parecer (`injectionDetected`), nunca instrução (FR-016).
 
 ---

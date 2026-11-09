@@ -1,5 +1,8 @@
 export const MAPAS_SOURCES: { name: string; baseUrl: string; scope: "federal" | "estadual" | "municipal" }[] = [
+  // federais
   { name: "Mapa da Cultura (MinC)", baseUrl: "https://mapa.cultura.gov.br", scope: "federal" },
+  { name: "Comitês de Cultura", baseUrl: "https://comitedecultura.org.br", scope: "federal" },
+  // estaduais
   { name: "Mapa Cultural do Ceará", baseUrl: "https://mapacultural.secult.ce.gov.br", scope: "estadual" },
   { name: "Mapa Cultural do DF", baseUrl: "http://mapa.cultura.df.gov.br", scope: "estadual" },
   { name: "Mapa Cultural do ES", baseUrl: "https://mapa.cultura.es.gov.br", scope: "estadual" },
@@ -10,7 +13,24 @@ export const MAPAS_SOURCES: { name: string; baseUrl: string; scope: "federal" | 
   { name: "Mapa Cultural de MS", baseUrl: "https://www.mapacultural.ms.gov.br", scope: "estadual" },
   { name: "Mapa Cultural do Pará", baseUrl: "https://mapacultural.pa.gov.br", scope: "estadual" },
   { name: "Mapas de Sergipe", baseUrl: "https://mapacultural.se.gov.br", scope: "estadual" },
+  { name: "Mapa Cultural da Paraíba", baseUrl: "https://mapacultural.pb.gov.br", scope: "estadual" },
+  { name: "Mapa da Cultura do Piauí", baseUrl: "https://www.mapadacultura.pi.gov.br", scope: "estadual" },
+  // municipais — long tail PNAB/Funcultura (testadas 200 OK em 08/dez;
+  // removidas as que deram timeout/404: AP, TO, RS-legado, Londrina, Sobral,
+  // Iguatu, Bento Gonçalves, Blumenau, SJC, Camaçari)
   { name: "SPCultura", baseUrl: "https://spcultura.prefeitura.sp.gov.br", scope: "municipal" },
+  { name: "JP Cultura (João Pessoa)", baseUrl: "https://jpcultura.joaopessoa.pb.gov.br", scope: "municipal" },
+  { name: "Mapa Cultural Natal", baseUrl: "https://mapacultural.natal.rn.gov.br", scope: "municipal" },
+  { name: "Mapa Cultural Campinas", baseUrl: "https://mapacultural.campinas.sp.gov.br", scope: "municipal" },
+  { name: "Mapas Culturais Campos RJ", baseUrl: "https://mapasculturais.campos.rj.gov.br", scope: "municipal" },
+  { name: "Mapa da Cultura Aracaju", baseUrl: "http://mapa.cultura.aracaju.se.gov.br", scope: "municipal" },
+  { name: "Maringá Cultura", baseUrl: "https://maringacultura.maringa.pr.gov.br", scope: "municipal" },
+  { name: "Mapa Cultural Petrolina", baseUrl: "https://mapacultural.petrolina.pe.gov.br", scope: "municipal" },
+  { name: "Mapa Cultural Parauapebas", baseUrl: "https://mapacultural.parauapebas.pa.gov.br", scope: "municipal" },
+  { name: "CulturAZ Santo André", baseUrl: "https://culturaz.santoandre.sp.gov.br", scope: "municipal" },
+  { name: "Mapa Cultural Mauá", baseUrl: "https://mapacultural.maua.sp.gov.br", scope: "municipal" },
+  { name: "Cultura em Rede Anápolis", baseUrl: "https://culturaemrede.anapolis.go.gov.br", scope: "municipal" },
+  { name: "Portal da Cultura Aparecida de Goiânia", baseUrl: "https://portaldacultura.aparecida.go.gov.br", scope: "municipal" },
 ];
 
 export interface MapasDate {

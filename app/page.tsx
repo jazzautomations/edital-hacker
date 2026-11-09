@@ -14,8 +14,8 @@ const stats: Array<[string, string]> = [
     "dos trabalhadores da arte apontam “encontrar empresário” como a maior dificuldade da carreira",
   ],
   [
-    "110",
-    "editais vivos agora no radar, lidos de 45+ instâncias Mapas Culturais e fontes municipais",
+    "110+",
+    "editais vivos no radar, lidos de 30 fontes: Mapas federais, estaduais e o long tail municipal do PNAB",
   ],
 ];
 

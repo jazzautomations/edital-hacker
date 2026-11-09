@@ -4,8 +4,8 @@ import { api } from "@/convex/_generated/api";
 import { SABATINA_SYSTEM, contextBlock, type SabatinaContext } from "@/lib/llm";
 
 // Cria uma sessão de sabatina por voz: sobe um agente da Agora Conversational AI
-// no canal RTC apontando o LLM pro nosso /api/voice-llm (Gemini por trás).
-// ASR + TTS rodam "managed" — saem dos créditos Agora do usuário.
+// no canal RTC — LLM managed (OpenAI-compat) com a rubrica do edital no system
+// prompt. ASR + TTS + LLM saem dos créditos Agora do usuário.
 
 const AGENT_API = "https://api.agora.io/api/conversational-ai-agent/v2/projects";
 
