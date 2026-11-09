@@ -56,7 +56,7 @@ export interface SabatinaReply {
   };
 }
 
-function contextBlock(ctx: SabatinaContext): string {
+export function contextBlock(ctx: SabatinaContext): string {
   const o = ctx.opportunity;
   const lines = [
     `EDITAL: ${o.name} (${o.sourceName})`,

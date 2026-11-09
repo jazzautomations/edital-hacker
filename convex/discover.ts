@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import { internalAction } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { discoverOpportunities } from "../lib/firecrawl";
+import { discoverOpportunities, discoverLeads } from "../lib/firecrawl";
 
 // Instâncias Mapas com WAF bloqueando a API direta (403) — o agent do
 // Firecrawl navega pela infra deles e contorna.
@@ -52,5 +52,39 @@ export const discoverBlocked = internalAction({
       }
     }
     return results;
+  },
+});
+
+// Prospecção comercial: o artista pede, o agente caça leads reais fora dos
+// editais — casas de show, festivais, marcas, escolas. Pública (chamada pela UI).
+export const prospectLeads = action({
+  args: {
+    profileId: v.id("profiles"),
+    leadType: v.string(),
+    niche: v.string(),
+    city: v.string(),
+    uf: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ found: number; upserted: number; error?: string }> => {
+    try {
+      const found = await discoverLeads(args.leadType, args.niche, args.city, args.uf);
+      let upserted = 0;
+      for (const l of found) {
+        await ctx.runMutation(internal.leads.upsert, {
+          profileId: args.profileId,
+          name: l.name,
+          kind: l.type ?? args.leadType,
+          city: args.city,
+          uf: args.uf,
+          sourceUrl: l.url,
+          contact: l.contact,
+          description: l.description,
+        });
+        upserted++;
+      }
+      return { found: found.length, upserted };
+    } catch (e) {
+      return { found: 0, upserted: 0, error: String(e) };
+    }
   },
 });

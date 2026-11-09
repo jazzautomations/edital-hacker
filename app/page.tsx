@@ -25,6 +25,18 @@ export default function Home() {
           Ver oportunidades abertas →
         </Link>
         <Link
+          href="/prospeccao"
+          className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
+        >
+          Caçar leads
+        </Link>
+        <Link
+          href="/agenda"
+          className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
+        >
+          Agenda & cachês
+        </Link>
+        <Link
           href="/pipeline"
           className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
         >

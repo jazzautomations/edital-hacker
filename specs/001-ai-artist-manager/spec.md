@@ -158,3 +158,10 @@ A artista usa o radar de graça. Para destravar sabatina ilimitada, pipeline e a
 - O escopo de "oportunidades" do MVP é fomento público (editais, prêmios, residências); prospecção ativa de gigs/casas de show é roadmap, não compromisso de entrega.
 - Pagamentos operam em ambiente de teste/sandbox durante o hack; produção real depende de cadastro completo do emissor.
 - Dados de demonstração são sintéticos; apenas dados públicos de editais são reais.
+
+## Addendum 09/11 — Escopo completo do coach (D011/D012/D013)
+
+- **FR-019**: O sistema DEVE prospectar leads comerciais (casas de show, festivais, marcas, escolas, produtoras) por tipo+nicho+cidade via Firecrawl agent, deduplicar por perfil, e gerenciar funil próprio (novo→contatado→respondeu→negociando→fechado|perdido). Lead fechado DEVE poder virar gig.
+- **FR-020**: O sistema DEVE manter agenda de trabalhos (shows, aulas, gravações) com data, local, cachê e status (marcado→feito→pago|cancelado), e consolidar totais a-receber/recebido por perfil.
+- **FR-021**: O sistema DEVE oferecer sabatina por voz via Agora Conversational AI, mantendo o prompt/rubrica no servidor (endpoint OpenAI-compatível `/api/voice-llm` → Gemini). Fallback textual obrigatório.
+- **FR-022 (roadmap)**: Gerador de material (EPK/release em PDF) via job assíncrono do agente — fora do MVP da demo mas dentro do framing coach.

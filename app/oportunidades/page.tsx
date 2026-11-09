@@ -56,9 +56,14 @@ export default function Oportunidades() {
             </p>
           )}
         </div>
-        <Link href="/pipeline" className="text-sm text-emerald-400 hover:underline">
-          Pipeline →
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/prospeccao" className="text-sm text-emerald-400 hover:underline">
+            Prospecção →
+          </Link>
+          <Link href="/pipeline" className="text-sm text-emerald-400 hover:underline">
+            Pipeline →
+          </Link>
+        </div>
       </header>
 
       {!opps ? (

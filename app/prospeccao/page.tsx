@@ -1,0 +1,301 @@
+"use client";
+
+import { useAction, useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import Link from "next/link";
+import { useState } from "react";
+import type { Profile } from "@/lib/types";
+
+const LEAD_TYPES = [
+  "casa_de_show",
+  "festival",
+  "marca",
+  "escola",
+  "produtora",
+  "outro",
+] as const;
+
+const STATUS_ORDER = ["novo", "contatado", "respondeu", "negociando", "fechado", "perdido"];
+const STATUS_NEXT: Record<string, string> = {
+  novo: "contatado",
+  contatado: "respondeu",
+  respondeu: "negociando",
+  negociando: "fechado",
+};
+
+const STATUS_STYLE: Record<string, string> = {
+  novo: "text-sky-400",
+  contatado: "text-amber-400",
+  respondeu: "text-violet-400",
+  negociando: "text-emerald-400",
+  fechado: "text-emerald-500",
+  perdido: "text-neutral-500",
+};
+
+type Lead = {
+  _id: string;
+  name: string;
+  kind: string;
+  city?: string;
+  uf?: string;
+  sourceUrl?: string;
+  contact?: string;
+  description?: string;
+  status: string;
+};
+
+export default function Prospeccao() {
+  const [email, setEmail] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
+  );
+  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
+    | Profile | null | undefined;
+  const leads = useQuery(
+    api.leads.listForProfile,
+    profile ? { profileId: profile._id as any } : "skip"
+  ) as Lead[] | undefined;
+
+  const prospect = useAction(api.discover.prospectLeads);
+  const setStatus = useMutation(api.leads.setStatus);
+  const removeLead = useMutation(api.leads.remove);
+  const addContact = useMutation(api.contacts.add);
+  const addGig = useMutation(api.gigs.add);
+  const [gigForm, setGigForm] = useState<{ leadId: string; date: string; fee: string } | null>(null);
+
+  const [leadType, setLeadType] = useState<string>("casa_de_show");
+  const [niche, setNiche] = useState("");
+  const [city, setCity] = useState("");
+  const [uf, setUf] = useState("");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [contacted, setContacted] = useState<Set<string>>(new Set());
+
+  async function hunt() {
+    if (!profile || !city || !niche || running) return;
+    setRunning(true);
+    setResult(null);
+    const r = (await prospect({
+      profileId: profile._id as any,
+      leadType,
+      niche,
+      city,
+      uf: uf || undefined,
+    })) as { found: number; upserted: number; error?: string };
+    setResult(r.error ? `Erro: ${r.error}` : `${r.found} leads encontrados, ${r.upserted} novos na lista`);
+    setRunning(false);
+  }
+
+  if (!profile) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
+        <h1 className="text-2xl font-bold">Prospecção</h1>
+        <p className="text-sm text-neutral-400">
+          Entre com seu email pra carregar seu perfil antes de caçar leads.
+        </p>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            localStorage.setItem("manager_email", email);
+            setEmail(email);
+          }}
+        >
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3"
+            placeholder="seu@email.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <button className="rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black">
+            Entrar
+          </button>
+        </form>
+      </main>
+    );
+  }
+
+  const grouped = STATUS_ORDER.map((s) => [s, (leads ?? []).filter((l) => l.status === s)] as const)
+    .filter(([, ls]) => ls.length > 0);
+
+  return (
+    <main className="mx-auto w-full max-w-5xl px-6 py-10">
+      <header className="mb-8">
+        <Link href="/" className="font-mono text-xs text-emerald-400">
+          manager_
+        </Link>
+        <h1 className="text-3xl font-bold">Prospecção</h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          O agente caça quem contrata você — casas de show, festivais, marcas, escolas — e vira funil de carreira.
+        </p>
+      </header>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800 p-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <select
+            className="rounded-xl bg-neutral-900 px-4 py-3"
+            value={leadType}
+            onChange={(e) => setLeadType(e.target.value)}
+          >
+            {LEAD_TYPES.map((t) => (
+              <option key={t} value={t}>{t.replaceAll("_", " ")}</option>
+            ))}
+          </select>
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3"
+            placeholder="nicho (ex: banda de forró)"
+            value={niche}
+            onChange={(e) => setNiche(e.target.value)}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3"
+            placeholder="cidade"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3"
+            placeholder="UF"
+            maxLength={2}
+            value={uf}
+            onChange={(e) => setUf(e.target.value.toUpperCase())}
+          />
+        </div>
+        <div className="mt-3 flex items-center gap-4">
+          <button
+            onClick={hunt}
+            disabled={running || !city || !niche}
+            className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-40"
+          >
+            {running ? "Caçando…" : "Caçar leads"}
+          </button>
+          {result && <p className="font-mono text-xs text-neutral-400">{result}</p>}
+        </div>
+      </section>
+
+      {leads && leads.length === 0 && !result && (
+        <p className="text-sm text-neutral-500">
+          Nenhum lead ainda. Define o tipo, o teu nicho e a cidade — o agente traz a lista com contato.
+        </p>
+      )}
+
+      {grouped.map(([status, ls]) => (
+        <section key={status} className="mb-6">
+          <h2 className={`mb-3 font-mono text-xs uppercase tracking-widest ${STATUS_STYLE[status]}`}>
+            {status} · {ls.length}
+          </h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {ls.map((l) => (
+              <article key={l._id} className="rounded-2xl border border-neutral-800 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">{l.name}</h3>
+                    <p className="font-mono text-xs text-neutral-500">
+                      {l.kind.replaceAll("_", " ")}
+                      {l.city ? ` · ${l.city}${l.uf ? `/${l.uf}` : ""}` : ""}
+                    </p>
+                  </div>
+                  {l.sourceUrl && (
+                    <a
+                      href={l.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 font-mono text-xs text-emerald-400 hover:underline"
+                    >
+                      perfil →
+                    </a>
+                  )}
+                </div>
+                {l.description && (
+                  <p className="mt-2 text-sm text-neutral-400">{l.description}</p>
+                )}
+                {l.contact && (
+                  <p className="mt-2 font-mono text-xs text-emerald-300">✉ {l.contact}</p>
+                )}
+                {l.status === "fechado" && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-950/40 p-2">
+                    <span className="text-xs text-emerald-400">virou trampo?</span>
+                    <input
+                      type="date"
+                      className="rounded-lg bg-neutral-900 px-2 py-1 text-xs"
+                      value={gigForm?.leadId === l._id ? gigForm.date : ""}
+                      onChange={(e) => setGigForm({ leadId: l._id, date: e.target.value, fee: gigForm?.fee ?? "" })}
+                    />
+                    <input
+                      placeholder="R$"
+                      className="w-20 rounded-lg bg-neutral-900 px-2 py-1 text-xs"
+                      value={gigForm?.leadId === l._id ? gigForm.fee : ""}
+                      onChange={(e) => setGigForm({ leadId: l._id, date: gigForm?.date ?? "", fee: e.target.value })}
+                    />
+                    <button
+                      disabled={!gigForm || gigForm.leadId !== l._id || !gigForm.date}
+                      onClick={async () => {
+                        await addGig({
+                          profileId: profile._id as any,
+                          leadId: l._id as any,
+                          title: l.name,
+                          venue: l.city ? `${l.city}${l.uf ? `/${l.uf}` : ""}` : undefined,
+                          date: gigForm!.date,
+                          fee: gigForm!.fee ? Number(gigForm!.fee.replace(",", ".")) : undefined,
+                        });
+                        setGigForm(null);
+                      }}
+                      className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-black disabled:opacity-40"
+                    >
+                      + gig
+                    </button>
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {STATUS_NEXT[l.status] && (
+                    <button
+                      onClick={() => setStatus({ id: l._id as any, status: STATUS_NEXT[l.status] })}
+                      className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
+                    >
+                      → {STATUS_NEXT[l.status]}
+                    </button>
+                  )}
+                  {l.status !== "fechado" && l.status !== "perdido" && (
+                    <button
+                      onClick={() => setStatus({ id: l._id as any, status: "perdido" })}
+                      className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-700"
+                    >
+                      ✕ perdido
+                    </button>
+                  )}
+                  {!contacted.has(l._id) ? (
+                    <button
+                      onClick={async () => {
+                        await addContact({
+                          profileId: profile._id as any,
+                          name: l.name,
+                          org: l.city ? `${l.city}${l.uf ? `/${l.uf}` : ""}` : undefined,
+                          role: l.kind.replaceAll("_", " "),
+                          email: l.contact?.includes("@") ? l.contact : undefined,
+                          phone: l.contact && !l.contact.includes("@") ? l.contact : undefined,
+                          notes: `Lead de prospecção${l.sourceUrl ? ` · ${l.sourceUrl}` : ""}`,
+                        });
+                        setContacted(new Set(contacted).add(l._id));
+                      }}
+                      className="rounded-lg bg-emerald-900 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-800"
+                    >
+                      + contato
+                    </button>
+                  ) : (
+                    <span className="px-3 py-1.5 text-xs text-emerald-500">✓ contato</span>
+                  )}
+                  <button
+                    onClick={() => removeLead({ id: l._id as any })}
+                    className="ml-auto rounded-lg px-3 py-1.5 text-xs text-neutral-600 hover:text-red-400"
+                  >
+                    remover
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </main>
+  );
+}

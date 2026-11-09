@@ -121,6 +121,33 @@ export default defineSchema({
     paidAt: v.number(),
   }).index("by_profile_opp", ["profileId", "opportunityId"]),
 
+  leads: defineTable({
+    profileId: v.id("profiles"),
+    name: v.string(),
+    kind: v.string(), // casa_de_show | festival | marca | escola | produtora | outro
+    city: v.optional(v.string()),
+    uf: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    contact: v.optional(v.string()), // email/insta/fone encontrado
+    description: v.optional(v.string()),
+    status: v.string(), // novo | contatado | respondeu | negociando | fechado | perdido
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
+  gigs: defineTable({
+    profileId: v.id("profiles"),
+    leadId: v.optional(v.id("leads")),
+    title: v.string(),
+    venue: v.optional(v.string()),
+    date: v.string(), // ISO
+    fee: v.optional(v.number()),
+    status: v.string(), // marcado | feito | pago | cancelado
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
   webhookLog: defineTable({
     eventId: v.string(),
     kind: v.string(),

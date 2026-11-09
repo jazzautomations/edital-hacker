@@ -83,3 +83,27 @@
 - **Fonte**: red team (premissa WTP fraca) + preço avulso já implementado.
 - **Afeta**: pitch, possivelmente reposicionamento (produtor/MEI se conversão baixa).
 - **Reversível?**: Sim.
+
+## D011 — 2026-11-09 — Prospecção comercial entra no MVP (não é fase 2)
+
+- **Decisão**: `leads` + `/prospeccao` + Firecrawl `/agent` caçando leads reais (casas de show, festivais, marcas, escolas, produtoras) por nicho+cidade. Funil próprio: novo→contatado→respondeu→negociando→fechado|perdido. Lead fechado → vira gig.
+- **Motivo**: o pitch público no grupo (05/11) já vendia "prospecção + edital" juntos; edital é sazonal — prospecção é o que segura retenção. Mesma máquina (discover+enrich+CRM), custo marginal baixo.
+- **Fonte**: áudio transcrito do fundador no grupo Hack Brasil 🇧🇷 (05/11 23:26) + instrução direta "a prospecção entra agora".
+- **Afeta**: FR-019 (novo), schema `leads`, `discover.prospectLeads`, `/prospeccao`.
+- **Reversível?**: Sim — tabela/rota isoladas.
+
+## D012 — 2026-11-09 — Voz via Agora Conversational AI (não Gemini Live nativo)
+
+- **Decisão**: Sabatina por voz usa Agora RTC + Conversational AI Engine. `POST /api/voice-session` sobe o agente no canal com `llm.url = /api/voice-llm` — endpoint OpenAI-compatível que chama Gemini por trás. ASR/TTS `credential_mode: managed` = sai dos créditos Agora do time.
+- **Motivo**: usuário tem créditos Agora; transporte RTC maduro; o cérebro continua nosso (prompt + rubrica server-side) — Agora só vê voz. Endpoint `/api/voice-llm` é OpenAI-compat, então testável sem Agora.
+- **Fonte**: docs Agora Conversational AI (`/v2/projects/{appid}/join`, custom LLM contract SSE) + créditos informados pelo usuário.
+- **Afeta**: T027 redefinido, `app/api/voice-llm`, `app/api/voice-session`, `.env.example` (AGORA_*).
+- **Reversível?**: Sim — Gemini Live route (`/api/live-token`) fica como alternativa.
+
+## D013 — 2026-11-09 — Framing final: coach/manager dos trabalhadores da arte
+
+- **Decisão**: O produto é o COACH — mentor-agente que organiza a vida do trabalhador da arte. Quatro pilares: (1) radar+sabatina de oportunidades, (2) prospecção de gigs, (3) agenda & financeiro (cachês, datas, pago/pendente), (4) organização de material (docs/EPK — EPK gerado é roadmap). Voz = a interface do mentor.
+- **Motivo**: instrução explícita do fundador ("a brisa é o coach musical"); resolve sazonalidade do edital com valor contínuo; alinha pitch público com produto.
+- **Fonte**: áudios 05/11 + conversa 09/11.
+- **Afeta**: spec FR-019/020/021, BOARD, pitch (demo abre no coach falando, não no feed).
+- **Reversível?**: Não — é o posicionamento.

@@ -77,3 +77,65 @@ export async function discoverOpportunities(
   }
   return json?.data?.opportunities ?? [];
 }
+
+export interface DiscoveredLead {
+  name: string;
+  type?: string;
+  url?: string;
+  contact?: string;
+  description?: string;
+}
+
+const LEAD_SCHEMA = {
+  type: "object",
+  properties: {
+    leads: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          type: { type: "string", description: "casa_de_show | festival | marca | escola | produtora | outro" },
+          url: { type: "string", description: "site ou Instagram do lead" },
+          contact: { type: "string", description: "email, telefone ou @instagram público de booking/contato" },
+          description: { type: "string" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  required: ["leads"],
+};
+
+/**
+ * Prospecção comercial: descobre leads reais (casas de show, festivais,
+ * marcas, escolas, produtoras) que contratam trabalhadores da arte.
+ */
+export async function discoverLeads(
+  leadType: string,
+  niche: string,
+  city: string,
+  uf?: string,
+  maxCredits = 40
+): Promise<DiscoveredLead[]> {
+  const res = await fetch(`${BASE}/agent`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt:
+        `Encontre ${leadType} em ${city}${uf ? `/${uf}` : ""}, Brasil, que contratam ou poderiam contratar ${niche}. ` +
+        `Para cada lead, traga nome, tipo, site ou Instagram, contato público de booking/comercial (email, telefone ou @usuario) e uma descrição curta do que é. ` +
+        `Priorize lugares e organizações reais e ativas, com presença online verificável.`,
+      location: { country: "BR" },
+      schema: LEAD_SCHEMA,
+      model: "spark-2",
+      maxCredits,
+    }),
+  });
+  if (!res.ok) throw new Error(`Firecrawl agent HTTP ${res.status}`);
+  const json = await res.json();
+  if (json?.status !== "completed" && !json?.data) {
+    throw new Error(`Firecrawl agent status ${json?.status ?? "unknown"}`);
+  }
+  return json?.data?.leads ?? [];
+}
