@@ -71,16 +71,22 @@ export default function Home() {
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
           <Link
-            href="/oportunidades"
+            href="/coach"
             className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black transition hover:bg-emerald-400"
           >
-            Entrar no radar — grátis →
+            Falar com o Coach →
+          </Link>
+          <Link
+            href="/oportunidades"
+            className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
+          >
+            Radar de editais — grátis
           </Link>
           <Link
             href="/assinatura"
-            className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
+            className="text-sm text-neutral-400 underline-offset-4 transition hover:text-emerald-400 hover:underline"
           >
-            Sabatinar uma proposta · R$ 9,90
+            Sabatinar proposta · R$ 9,90
           </Link>
         </div>
       </section>
@@ -132,6 +138,27 @@ export default function Home() {
               <p className="mt-4 text-sm font-semibold text-emerald-400 opacity-80 transition group-hover:opacity-100">
                 {p.cta}
               </p>
+            </Link>
+          ))}
+        </div>
+
+        {/* arsenal — os documentos que mentoria vende, gerados em 1 clique */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+            o arsenal do coach:
+          </span>
+          {[
+            ["Rider técnico", "/rider"],
+            ["Press kit (EPK)", "/epk"],
+            ["Prestação de contas", "/prestacao"],
+            ["Agenda & cachês", "/agenda"],
+          ].map(([label, href]) => (
+            <Link
+              key={href}
+              href={href}
+              className="rounded-full border border-neutral-800 px-4 py-1.5 text-xs text-neutral-400 transition hover:border-emerald-500/60 hover:text-emerald-300"
+            >
+              {label}
             </Link>
           ))}
         </div>

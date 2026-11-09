@@ -155,6 +155,31 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_profile", ["profileId"]),
 
+  riders: defineTable({
+    profileId: v.id("profiles"),
+    name: v.string(), // nome da formação: "trio", "banda completa", "solo"
+    techContact: v.optional(v.string()),
+    members: v.array(v.object({
+      position: v.string(), instrument: v.string(), vocals: v.optional(v.boolean()),
+    })),
+    inputs: v.array(v.object({
+      channel: v.number(), source: v.string(), mic: v.string(),
+    })),
+    monitors: v.optional(v.string()),
+    backlineOwn: v.optional(v.string()),
+    backlineVenue: v.optional(v.string()),
+    hospitality: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
+  coachMessages: defineTable({
+    profileId: v.id("profiles"),
+    role: v.string(), // user | assistant
+    text: v.string(),
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
   webhookLog: defineTable({
     eventId: v.string(),
     kind: v.string(),
