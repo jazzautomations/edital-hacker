@@ -165,3 +165,7 @@ A artista usa o radar de graça. Para destravar sabatina ilimitada, pipeline e a
 - **FR-020**: O sistema DEVE manter agenda de trabalhos (shows, aulas, gravações) com data, local, cachê e status (marcado→feito→pago|cancelado), e consolidar totais a-receber/recebido por perfil.
 - **FR-021**: O sistema DEVE oferecer sabatina por voz via Agora Conversational AI, mantendo o prompt/rubrica no servidor (endpoint OpenAI-compatível `/api/voice-llm` → Gemini). Fallback textual obrigatório.
 - **FR-022 (roadmap)**: Gerador de material (EPK/release em PDF) via job assíncrono do agente — fora do MVP da demo mas dentro do framing coach.
+
+## Addendum roadmap pós-hackathon (D015)
+
+- **Fase 2 (pós-12/dez)**: organização de material de divulgação, conteúdo/redes sociais e anúncios — excluídos do MVP pela regra 5.2 da trilha, entram como retenção/upgrade do produto contínuo. EPK/release em PDF (FR-022) permanece no MVP por ser documento profissional, não marketing.

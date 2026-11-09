@@ -115,3 +115,11 @@
 - **Fonte**: relatório de pesquisa 09/11 (fontes primárias: jfigueras.com.br, probandas.com.br, TUM Festival, Hotmart PRO BANDAS, NCM AO VIVO).
 - **Afeta**: roteiro do vídeo (P001), copy da landing, persona da demo (artista midstream que mistura edital + gig privado), capricho visual elevado (Kiss é videomaker profissional — estética é nota escondida).
 - **Reversível?**: N/A — é copy/estratégia de pitch.
+
+## D015 — 2026-11-09 — Redes sociais/conteúdo = fase 2 (pós-hackathon)
+
+- **Decisão**: Ferramentas de redes sociais, geração de conteúdo e marketing ficam FORA do MVP do hackathon e entram na fase 2 (continuação do produto pós-12/dez).
+- **Motivo**: (1) a trilha exclui explicitamente "ferramentas de publicidade e marketing em geral, automação de perfis e engajamento" (regulamento 5.2) — incluir agora arrisca desclassificação do escopo; (2) a dor é real e documentada (artista obrigado a ser criador de conteúdo) — pós-hack a restrição some e vira argumento de retenção/upgrade; (3) Kiss vende "sua marca parece mais cara" e Figueras vende Instagram para Músicos — a fase 2 é exatamente o que os mentores cobram caro pra ensinar.
+- **Fonte**: regulamento 5.2 + áudio do fundador (05/11, creator economy) + teardown dos funis (Instagram para Músicos, módulo divulgação do NCM).
+- **Afeta**: roadmap pós-hack — EPK/material já no MVP (é documento, não marketing); fase 2 = conteúdo/calendário/anúncios.
+- **Reversível?**: Sim — se o regulamento for reinterpretado, volta pro escopo.
