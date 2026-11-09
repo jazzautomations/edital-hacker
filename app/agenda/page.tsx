@@ -111,6 +111,7 @@ export default function Agenda() {
           </p>
         </div>
         <div className="flex gap-4 text-sm">
+          <a href={`/epk?email=${encodeURIComponent(profile.email)}`} target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">EPK ↗</a>
           <Link href="/prospeccao" className="text-emerald-400 hover:underline">Prospecção →</Link>
           <Link href="/pipeline" className="text-emerald-400 hover:underline">Pipeline →</Link>
         </div>

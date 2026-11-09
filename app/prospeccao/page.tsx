@@ -276,6 +276,33 @@ export default function Prospeccao() {
                     📄 gerar proposta em PDF
                   </button>
                 )}
+                {(l.status === "negociando" || l.status === "fechado") && (
+                  <button
+                    onClick={async () => {
+                      const date = gigForm?.leadId === l._id ? gigForm.date : "";
+                      const fee = gigForm?.leadId === l._id ? Number(gigForm.fee.replace(",", ".")) : 0;
+                      if (!date || !fee) {
+                        alert("Preenche a data e o cachê no bloco 'virou trampo?' — o contrato precisa dos dois.");
+                        return;
+                      }
+                      const res = await fetch("/api/contrato", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          profile: { name: profile.name, personType: profile.personType, email: profile.email },
+                          lead: { name: l.name, kind: l.kind, city: l.city },
+                          gig: { title: `Apresentação — ${l.name}`, date, fee, venue: l.city },
+                        }),
+                      });
+                      if (!res.ok) return;
+                      const blob = await res.blob();
+                      window.open(URL.createObjectURL(blob), "_blank");
+                    }}
+                    className="ml-3 mt-2 text-xs text-amber-400 hover:underline"
+                  >
+                    📝 gerar contrato
+                  </button>
+                )}
                 {l.status === "fechado" && (
                   <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-950/40 p-2">
                     <span className="text-xs text-emerald-400">virou trampo?</span>

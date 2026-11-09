@@ -111,9 +111,14 @@ export default function Pipeline() {
           </Link>
           <h1 className="text-3xl font-bold">Pipeline de {profile.name}</h1>
         </div>
-        <Link href="/oportunidades" className="text-sm text-emerald-400 hover:underline">
-          + Oportunidades
-        </Link>
+        <div className="flex gap-4 text-sm">
+          <Link href="/prestacao" className="text-amber-400 hover:underline">
+            Prestação →
+          </Link>
+          <Link href="/oportunidades" className="text-emerald-400 hover:underline">
+            + Oportunidades
+          </Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7">
