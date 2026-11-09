@@ -4,26 +4,29 @@
 
 ## Roteiro do demo (o filtro do backlog)
 
-> 60–90s na perspectiva do jurado. Só entra no board o que aparece aqui ou sustenta o que aparece.
+> 60–90s na perspectiva do jurado. Vocabulário D014 (B.R.A.V.O.): Base→Repertório→Audiência→Venda→entrega Orientada. Medir em R$.
 
-1. "R$15 bi em fomento descentralizado — o artista acha zero" → abre o feed com dados reais
-2. Card "aceita você" + "máx 1 proposta" → entra na oportunidade
-3. Sabatina: parecerista entrevista contra rubrica real → parecer 72/100 citando critério
-4. Card cai no pipeline com a nota; doc vencendo dispara alerta
-5. Checkout Pix R$9,90 destravando sabatina ao vivo
-6. "O primeiro empresário que todo artista pode pagar"
+1. "R$15 bi em fomento + gigs privados — o coach organiza TODAS as fontes de renda da arte" → perfil do artista midstream (edital + gig)
+2. Radar com dados reais → card "aceita você" + "máx 1 proposta" → entra na oportunidade
+3. Sabatina (voz se Agora ok; texto = fallback garantido) → parecer 72/100 citando critério da rubrica real
+4. Prospecção: agente caça casas de show na cidade → lead fecha → **vira gig com cachê** na agenda
+5. Pipeline + doc vencendo dispara alerta; checkout Pix R$9,90 ao vivo
+6. "O coach que todo trabalhador da arte pode pagar — o que mentoria de R$ milhares ensina, o agente faz todo dia"
 
 ## Grafo de dependência → ordem
 
 ```
-T005 convex dev → tudo E2E (T039 decide depois)
-T027 voz → só após texto E2E verde (T021/T022/T024 ✅)
+✅ T005 convex dev → 110 opps reais no banco
+✅ D011 prospecção MVP → leads+gigs deployados (E2E pendente de FIRECRAWL_API_KEY)
+✅ D013 coach → agenda/cachês no ar
+E2E sabatina/billing → precisa LLM_API_KEY + ABACATE_* no .env.local + convex env
+T027 voz Agora → backend pronto, UI em progresso (subagente); precisa AGORA_*
 T044 WorkOS → após paywall E2E
-T045 deploy → após T005+T044
-P001–P008 submissão → paralelo ao build desde já
+T045 deploy Vercel → após E2E
+P001–P008 submissão → roteiro do vídeo em progresso (subagente)
 ```
 
-Ordem: T005 → E2E checks → T027 → T044 → T045 → T046–T050
+Ordem: E2E (keys!) → voz UI → T044 → T045 → T046–T050
 
 ## A fazer
 
@@ -34,13 +37,26 @@ Ordem: T005 → E2E checks → T027 → T044 → T045 → T046–T050
 
 ### [E2E] Bateria end-to-end
 - Dono: Devin
-- Depende de: T005
+- Depende de: T005 ✅ + **keys** (LLM_API_KEY, FIRECRAWL_API_KEY, RESEND_API_KEY, ABACATE_*, AGORA_*)
 - Pronto quando: `quickstart.md` inteiro roda — sabatina persiste, webhook ativa plano, alertas saem deduplicados
+- ⚠️ Nota: env vars de Convex functions vão no **convex env** (`npx convex env set`), não só .env.local
 
-### [T027] Mentor com voz (Gemini Live)
-- Dono: Devin
-- Depende de: E2E verde
-- Pronto quando: sabatina falada funciona — token efêmero → WebSocket → áudio, com modelo travado por constraint
+### ~~[T051] Prospecção MVP~~ ✅ CÓDIGO FEITO (E2E pendente)
+- `leads` table + `/prospeccao` + `discover.prospectLeads` (Firecrawl agent) + lead→gig
+- Pronto de verdade quando: caçada real retorna leads com contato
+
+### ~~[T052] Agenda & cachês~~ ✅ FEITO
+- `gigs` table + `/agenda` (marcado→feito→pago, a-receber/recebido)
+
+### [T053] Voz Agora
+- Backend ✅ (`/api/voice-session` + `/api/voice-llm`, managed ASR/TTS/LLM)
+- UI: em progresso (subagente) — `components/VoiceSabatina.tsx`
+- Precisa: AGORA_APP_ID/CUSTOMER_ID/SECRET + túnel pública p/ voice-llm em dev
+
+### [SQUAD] Divisão do time (proposta ao grupo 09/11)
+- Laura → T044 auth + perfil | Asthri → filtros feed | AdminLTR → qualidade sabatina | Felipe → inscrição+vídeo | Devin → E2E+voz+crons
+
+### ~~[T027] Mentor com voz (Gemini Live)~~ → virou T053 (Agora, D012)
 
 ### [T044] Auth WorkOS AuthKit
 - Dono: Devin · `npx workos@latest`
