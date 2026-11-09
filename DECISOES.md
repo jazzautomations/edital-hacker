@@ -107,3 +107,11 @@
 - **Fonte**: áudios 05/11 + conversa 09/11.
 - **Afeta**: spec FR-019/020/021, BOARD, pitch (demo abre no coach falando, não no feed).
 - **Reversível?**: Não — é o posicionamento.
+
+## D014 — 2026-11-09 — Vocabulário do pitch = a língua dos prováveis mentores
+
+- **Decisão**: Pitch e demo usam o vocabulário de Thiago Kiss e Jacques Figueras (prováveis mentores da trilha): método B.R.A.V.O. (Base→Repertório→Audiência→Venda→entrega Orientada) mapeia 1:1 nos pilares do produto. Regra de copy: "preparar, não escrever" · medir em R$ (cachê, pipeline, renda) · nunca "viralizar/substituir empresário" · editais = UMA fonte de renda entre várias (blinda "e se acabar a PNAB?").
+- **Motivo**: os dois vendem exatamente "coach/manager de carreira de artista" como mentoria high-ticket (Kiss: R$2,6M em mentoria; Figueras: 2 Grammy, 20+ anos de booker, mentorado típico = quem já aprovou edital PNAB). O produto democratiza em software o que eles vendem — enquadrar como escala de acesso, não substituto.
+- **Fonte**: relatório de pesquisa 09/11 (fontes primárias: jfigueras.com.br, probandas.com.br, TUM Festival, Hotmart PRO BANDAS, NCM AO VIVO).
+- **Afeta**: roteiro do vídeo (P001), copy da landing, persona da demo (artista midstream que mistura edital + gig privado), capricho visual elevado (Kiss é videomaker profissional — estética é nota escondida).
+- **Reversível?**: N/A — é copy/estratégia de pitch.
