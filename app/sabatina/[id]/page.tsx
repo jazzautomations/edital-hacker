@@ -5,7 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
-import type { SabatinaContext, ChatTurn } from "@/lib/gemini";
+import type { SabatinaContext, ChatTurn } from "@/lib/llm";
 import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
 
 interface Msg {

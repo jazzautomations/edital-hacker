@@ -1,4 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
+// LLM provider-agnóstico via API OpenAI-compatível (chat completions).
+// Funciona com OpenAI, DeepSeek, OpenRouter, Groq, Azure — qualquer endpoint
+// que fale /v1/chat/completions. Config: LLM_API_KEY, LLM_BASE_URL, LLM_MODEL.
 
 export const SABATINA_SYSTEM = `Você é um parecerista experiente de bancas de editais culturais brasileiros (Rouanet, PNAB, ProAC, Funcultura, editais municipais).
 
@@ -85,27 +87,68 @@ export function contextBlock(ctx: SabatinaContext): string {
   return lines.filter(Boolean).join("\n");
 }
 
+function cfg() {
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey) throw new Error("LLM_API_KEY not set");
+  return {
+    apiKey,
+    baseUrl: (process.env.LLM_BASE_URL ?? "https://api.openai.com/v1").replace(/\/$/, ""),
+    model: process.env.LLM_MODEL ?? "gpt-4o-mini",
+  };
+}
+
+export function llmConfigured(): boolean {
+  return Boolean(process.env.LLM_API_KEY);
+}
+
+/** Chamada não-streaming (sabatina texto, enrich). */
+export async function chat(messages: { role: string; content: string }[]): Promise<string> {
+  const { apiKey, baseUrl, model } = cfg();
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages, temperature: 0.4 }),
+  });
+  if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
+/** Chamada JSON (enrich estruturado). Pede response_format json_object quando suportado. */
+export async function jsonChat<T = any>(system: string, user: string): Promise<T> {
+  const { apiKey, baseUrl, model } = cfg();
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const json = await res.json();
+  const text = json.choices?.[0]?.message?.content ?? "{}";
+  try {
+    return JSON.parse(text);
+  } catch {
+    const m = text.match(/\{[\s\S]*\}/);
+    return m ? JSON.parse(m[0]) : ({} as T);
+  }
+}
+
 export async function sabatinaTurn(
   ctx: SabatinaContext,
   history: ChatTurn[]
 ): Promise<SabatinaReply> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY not set");
-  const ai = new GoogleGenAI({ apiKey: key });
-
-  const contents = [
-    {
-      role: "user",
-      parts: [{ text: `${SABATINA_SYSTEM}\n\n${contextBlock(ctx)}\n\nComece a sabatina.` }],
-    },
-    ...history.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
-  ];
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: contents as any,
-  });
-  const text = response.text ?? "";
+  const text = await chat([
+    { role: "system", content: `${SABATINA_SYSTEM}\n\n${contextBlock(ctx)}\n\nComece a sabatina.` },
+    ...history.map((t) => ({ role: t.role === "model" ? "assistant" : "user", content: t.text })),
+  ]);
 
   const jsonMatch = text.match(/\{[\s\S]*"done"\s*:\s*true[\s\S]*\}/);
   if (jsonMatch) {

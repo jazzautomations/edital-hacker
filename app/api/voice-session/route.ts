@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
-import { SABATINA_SYSTEM, contextBlock, type SabatinaContext } from "@/lib/gemini";
+import { SABATINA_SYSTEM, contextBlock, type SabatinaContext } from "@/lib/llm";
 
 // Cria uma sessão de sabatina por voz: sobe um agente da Agora Conversational AI
 // no canal RTC apontando o LLM pro nosso /api/voice-llm (Gemini por trás).
@@ -63,9 +63,6 @@ export async function POST(req: Request) {
   const userUid = 1001;
   const agentUid = 0;
 
-  const origin = new URL(req.url).origin;
-  const llmUrl = `${origin}/api/voice-llm`;
-
   const joinRes = await fetch(`${AGENT_API}/${appId}/join`, {
     method: "POST",
     headers: {
@@ -84,9 +81,8 @@ export async function POST(req: Request) {
         asr: { credential_mode: "managed", params: { language: "pt-BR" } },
         llm: {
           credential_mode: "managed",
+          vendor: "openai",
           style: "openai",
-          url: llmUrl,
-          api_key: process.env.VOICE_LLM_API_KEY ?? "",
           system_messages: [
             {
               role: "system",
@@ -100,7 +96,7 @@ export async function POST(req: Request) {
             "Fala! Sou a tua banca simulada. Vamos testar tua proposta contra o edital de verdade — me conta em uma frase o que tu quer fazer.",
           failure_message: "Tive um problema técnico — pode repetir?",
           max_history: 10,
-          params: { model: "gemini-3-flash-preview" },
+          params: { model: process.env.AGORA_LLM_MODEL ?? "gpt-4o-mini" },
         },
         tts: { credential_mode: "managed" },
       },
