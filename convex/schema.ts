@@ -107,6 +107,11 @@ export default defineSchema({
         missingDocs: v.array(v.string()),
         warnings: v.optional(v.array(v.string())),
         injectionDetected: v.optional(v.boolean()),
+        // calibração banca real: gate documental binário + nota por critério
+        documentalGate: v.optional(v.string()), // pass | fail (fail → score cap 39)
+        criterionScores: v.optional(
+          v.array(v.object({ criterion: v.string(), score: v.number(), note: v.optional(v.string()) }))
+        ),
       })
     ),
     createdAt: v.number(),
@@ -210,4 +215,41 @@ export default defineSchema({
     kind: v.string(),
     processedAt: v.number(),
   }).index("by_event", ["eventId"]),
+
+  // Benchmark de cachê público — contratos de inexigibilidade do PNCP
+  // (art. 94 §2º obriga itemizar o cachê). Dado GLOBAL, não por perfil:
+  // "quanto uma cidade desse porte paga por show" é inteligência de
+  // precificação e munição de justificativa de preço (Lei 14.133 art. 23).
+  pncpContracts: defineTable({
+    externalId: v.string(), // numero_controle_pncp
+    description: v.string(),
+    artistName: v.optional(v.string()), // extraído da descrição
+    fornecedor: v.optional(v.string()),
+    orgao: v.optional(v.string()),
+    municipio: v.optional(v.string()),
+    uf: v.optional(v.string()),
+    codigoIbge: v.optional(v.string()),
+    valorGlobal: v.optional(v.number()),
+    dataAssinatura: v.optional(v.string()),
+    url: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_external", ["externalId"])
+    .index("by_uf", ["uf"]),
+
+  // Ledger de despesas por projeto aprovado — a prestação começa no
+  // primeiro gasto, não no fim. Cada NF/comprovante entra quando nasce
+  // e o agente flagra a glosa na hora (fora de vigência, descrição
+  // genérica, favorecido errado, rubrica inexistente).
+  expenses: defineTable({
+    profileId: v.id("profiles"),
+    pipelineItemId: v.optional(v.id("pipelineItems")),
+    rubrica: v.string(),
+    fornecedor: v.optional(v.string()),
+    description: v.optional(v.string()),
+    amount: v.number(),
+    date: v.string(), // ISO do gasto
+    flags: v.array(v.string()), // glosas detectadas
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId"]),
 });

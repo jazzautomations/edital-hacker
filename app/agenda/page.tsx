@@ -51,6 +51,45 @@ export default function Agenda() {
   const [form, setForm] = useState({ title: "", venue: "", date: "", fee: "" });
   const [calc, setCalc] = useState({ musicians: "3", pay: "400", km: "100", tech: "0", lodge: "0", extra: "0" });
   const [showCalc, setShowCalc] = useState(false);
+  const [roteiro, setRoteiro] = useState<{ gig: Gig; setlist: string; promotor: string; cnpj: string; busy: boolean } | null>(null);
+
+  // O roteiro ECAD é o doc que impede a verba do show de ir pra outros autores.
+  async function gerarRoteiro() {
+    if (!roteiro || !profile) return;
+    setRoteiro({ ...roteiro, busy: true });
+    const faixas = roteiro.setlist
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 31)
+      .map((l) => {
+        const [obra, ...rest] = l.split(/[-–—]/);
+        return { obra: obra.trim(), autores: rest.join("-").trim() || profile.name };
+      });
+    const res = await fetch("/api/roteiro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        evento: {
+          artista: profile.name,
+          evento: roteiro.gig.title,
+          local: [roteiro.gig.venue].filter(Boolean).join(" · ") || "—",
+          data: roteiro.gig.date,
+          promotor: roteiro.promotor || undefined,
+          cnpjPromotor: roteiro.cnpj || undefined,
+        },
+        faixas,
+      }),
+    });
+    setRoteiro(null);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `roteiro-ecad-${roteiro.gig.date}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   const cachet = calcCachet({
     musicians: Number(calc.musicians) || 1,
@@ -293,6 +332,13 @@ export default function Agenda() {
                 >
                   📅 cal
                 </a>
+                <button
+                  onClick={() => setRoteiro({ gig: g, setlist: "", promotor: "", cnpj: "", busy: false })}
+                  className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-emerald-400 hover:bg-neutral-700"
+                  title="Gerar roteiro musical ECAD (.xlsx) — sem ele a verba do show vai pro rateio e paga outros autores"
+                >
+                  📄 ecad
+                </button>
                 <span className={`font-mono text-xs uppercase ${STYLE[g.status]}`}>{g.status}</span>
                 {NEXT[g.status] && (
                   <button
@@ -319,6 +365,53 @@ export default function Agenda() {
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {roteiro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
+          <div className="w-full max-w-lg rounded-2xl border border-neutral-700 bg-neutral-950 p-5">
+            <h3 className="font-bold">📄 Roteiro musical ECAD</h3>
+            <p className="mt-1 text-xs text-neutral-400">
+              {roteiro.gig.title} · {roteiro.gig.date} — sem roteiro, a verba do show (que o promotor já paga) vai pro rateio e paga outros autores.
+            </p>
+            <input
+              className="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm"
+              placeholder="promotor (quem licencia junto ao ECAD)"
+              value={roteiro.promotor}
+              onChange={(e) => setRoteiro({ ...roteiro, promotor: e.target.value })}
+            />
+            <input
+              className="mt-2 w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm"
+              placeholder="CNPJ/CPF do promotor (opcional)"
+              value={roteiro.cnpj}
+              onChange={(e) => setRoteiro({ ...roteiro, cnpj: e.target.value })}
+            />
+            <textarea
+              className="mt-2 h-40 w-full rounded-xl bg-neutral-900 px-4 py-3 font-mono text-sm"
+              placeholder={"Setlist — uma música por linha:\nNome da música — Autores\nEvidências — José Augusto / Paulo Valle"}
+              value={roteiro.setlist}
+              onChange={(e) => setRoteiro({ ...roteiro, setlist: e.target.value })}
+            />
+            <p className="mt-1 text-[10px] text-neutral-600">
+              máx 31 músicas por formulário · prazo: até 48h úteis pós-show (licenças &lt; R$500)
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={gerarRoteiro}
+                disabled={roteiro.busy || !roteiro.setlist.trim()}
+                className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black disabled:opacity-40"
+              >
+                {roteiro.busy ? "Gerando…" : "Baixar .xlsx"}
+              </button>
+              <button
+                onClick={() => setRoteiro(null)}
+                className="rounded-xl border border-neutral-700 px-4 py-3 text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

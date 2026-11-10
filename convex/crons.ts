@@ -17,5 +17,7 @@ crons.cron("discover-blocked", "0 9 * * 1", internal.discover.discoverBlocked);
 crons.cron("weekly-digest", "0 12 * * 1", internal.digest.run);
 // Reply-detect: resposta de contratante no Gmail → lead move no funil (2x/dia)
 crons.cron("reply-detect", "0 13,21 * * *", internal.replyDetect.run);
+// PNCP: credenciamentos abertos + benchmark de cachê público (diário)
+crons.daily("pncp-scan", { hourUTC: 9, minuteUTC: 30 }, internal.pncp.scanPncp);
 
 export default crons;

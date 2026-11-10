@@ -24,7 +24,7 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). SÓ converse quando nenhuma tool se aplicar.
 2b. RAPPORT É LEI: antes de redigir email de abordagem ou proposta pra um lead/edital, chama research_target se o dossiê ainda não existir — e SEMPRE use os ganchos de rapport do dossiê no texto (citar show recente, linguagem deles, projeto específico). Email genérico é spam.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
@@ -227,6 +227,18 @@ export const COACH_TOOLS: ToolDef[] = [
       required: ["title", "date"],
     },
   },
+  {
+    name: "consultar_cache",
+    description:
+      "Benchmark de cachê público — consulta contratos reais de show no PNCP (prefeituras que contrataram artista por inexigibilidade, com valor itemizado por lei). Use pra responder 'quanto posso cobrar', 'quanto prefeitura paga' ou pra precificar proposta. Dado REAL com fonte.",
+    parameters: {
+      type: "object",
+      properties: {
+        uf: { type: "string", description: "UF pra filtrar (ex: CE, MG). Omitir pra Brasil todo" },
+        q: { type: "string", description: "busca livre — nome de artista, tipo de evento, município" },
+      },
+    },
+  },
 ];
 
 /** Executa uma tool do coach contra o Convex. Retorna texto pro LLM/áudio. */
@@ -369,6 +381,23 @@ export async function runCoachTool(
         description: String(call.arguments.notes ?? ""),
       });
       return `No Google Calendar (${id}) — ${call.arguments.title} em ${String(call.arguments.date).slice(0, 16)}.`;
+    }
+    case "consultar_cache": {
+      const r = (await convex.action(api.pncp.benchmark, {
+        uf: call.arguments.uf ? String(call.arguments.uf).toUpperCase() : undefined,
+        q: call.arguments.q ? String(call.arguments.q) : undefined,
+      })) as any;
+      if (!r?.contratos?.length)
+        return `Sem contratos artísticos encontrados${call.arguments.uf ? ` em ${call.arguments.uf}` : ""} nessa busca — tenta outro termo ou tira o filtro de UF.`;
+      const fmt = (v?: number) => (v ? `R$ ${Math.round(v).toLocaleString("pt-BR")}` : "—");
+      return (
+        `BENCHMARK PNCP (${r.amostra} contratos recentes${r.mediana ? ` · mediana ${fmt(r.mediana)}` : ""}):\n` +
+        r.contratos
+          .slice(0, 10)
+          .map((c: any) => `  · ${c.artista ?? "?"} — ${fmt(c.valor)} em ${c.municipio}/${c.uf}${c.data ? ` (${String(c.data).slice(0, 7)})` : ""}`)
+          .join("\n") +
+        `\n\nUse: mediana pra precificar; contrato similar citado por número na justificativa de preço da prefeitura (Lei 14.133 art. 23).`
+      );
     }
     default:
       return `Tool desconhecida: ${call.name}`;

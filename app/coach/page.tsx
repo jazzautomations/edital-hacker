@@ -241,6 +241,8 @@ function Briefing({ profileId, ctx }: { profileId: string; ctx: any }) {
       items.push({ icon: "🎤", text: `${g.title} — ${g.date.slice(5)}${g.fee ? ` · R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`, href: "/agenda", tone: "text-sky-300" });
     if (g.status === "feito" && d !== null && d < 0)
       items.push({ icon: "💸", text: `${g.title} rolou e R$ ${g.fee?.toLocaleString("pt-BR") ?? "—"} não consta pago — cobra`, href: "/agenda", tone: "text-red-300" });
+    if (g.status === "feito" && d !== null && d >= -2)
+      items.push({ icon: "🎵", text: `${g.title}: roteiro ECAD vence em ~48h úteis — sem ele a verba vai pra outros autores`, href: "/agenda", tone: "text-amber-300" });
   }
 
   if (!items.length) return null;

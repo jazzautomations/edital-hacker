@@ -21,6 +21,8 @@ interface Verdict {
   missingDocs: string[];
   warnings: string[];
   injectionDetected: boolean;
+  documentalGate?: "pass" | "fail";
+  criterionScores?: { criterion: string; score: number; note?: string }[];
 }
 
 export default function Sabatina({
@@ -288,12 +290,31 @@ export default function Sabatina({
         ))}
         {loading && <p className="text-sm text-neutral-500">Parecerista pensando…</p>}
         {verdict && (
-          <div className="rounded-2xl border border-emerald-700 bg-emerald-950/40 p-5">
+          <div className={`rounded-2xl border p-5 ${verdict.documentalGate === "fail" ? "border-red-800 bg-red-950/40" : "border-emerald-700 bg-emerald-950/40"}`}>
+            {verdict.documentalGate === "fail" && (
+              <p className="mb-2 rounded bg-red-900/50 px-3 py-2 text-xs font-bold text-red-200">
+                ⛔ INABILITADO POR FORMALIDADE — a proposta morreria antes do mérito (assim morrem 76% das reprovações reais)
+              </p>
+            )}
             <p className="text-3xl font-bold text-emerald-400">
               {verdict.score}
               <span className="text-base text-neutral-400">/100</span>
             </p>
             <p className="mt-2 text-sm">{verdict.summary}</p>
+            {verdict.criterionScores && verdict.criterionScores.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <p className="font-mono text-[10px] uppercase text-neutral-500">nota por critério (espelho da banca)</p>
+                {verdict.criterionScores.map((c) => (
+                  <div key={c.criterion} className="flex items-baseline gap-2 text-xs">
+                    <span className={`font-mono font-bold ${c.score === 0 ? "text-red-400" : c.score <= 5 ? "text-amber-400" : "text-emerald-400"}`}>
+                      {c.score}/10
+                    </span>
+                    <span className="text-neutral-300">{c.criterion}</span>
+                    {c.note && <span className="truncate text-neutral-600">— {c.note}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
             {verdict.gaps.length > 0 && (
               <ul className="mt-3 list-disc pl-5 text-sm text-amber-300">
                 {verdict.gaps.map((g) => (
