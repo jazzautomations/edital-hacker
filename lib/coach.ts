@@ -1,7 +1,7 @@
 import type { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import type { ToolCall, ToolDef } from "@/lib/llm";
-import { composioConfigured, createDraft, fetchUnreadEmails } from "@/lib/composio";
+import { composioConfigured, createDraft, fetchInbox, gmailStatus } from "@/lib/composio";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -199,8 +199,10 @@ export async function runCoachTool(
       if (!composioConfigured()) {
         return "Gmail ainda não conectado — falta COMPOSIO_API_KEY + conta conectada. Diz pro artista que é 1 clique de OAuth quando configurado.";
       }
+      const st = await gmailStatus(profileEmail);
+      if (!st.connected) return `Gmail não conectado ainda — vai em /coach e clica "Conectar Gmail" (1 clique de OAuth).`;
       const max = typeof call.arguments.max === "number" ? call.arguments.max : 10;
-      const emails = await fetchUnreadEmails(max);
+      const emails = await fetchInbox(profileEmail, "in:inbox is:unread", max);
       if (!emails.length) return "Caixa zerada — nenhum não-lido. 🤘";
       return `NÃO-LIDOS (${emails.length}):\n` + emails.map((e, i) => `  ${i + 1}. ${e.from} — "${e.subject}"`).join("\n");
     }
@@ -209,6 +211,7 @@ export async function runCoachTool(
         return "Gmail ainda não conectado — o rascunho fica pronto no texto, mas pra criar de verdade falta COMPOSIO_API_KEY.";
       }
       const id = await createDraft(
+        profileEmail,
         String(call.arguments.to ?? ""),
         String(call.arguments.subject ?? ""),
         String(call.arguments.body ?? "")

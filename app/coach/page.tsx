@@ -24,6 +24,8 @@ const ACTION_LABEL: Record<string, string> = {
   create_gig: "anotou na agenda",
   update_lead_status: "moveu lead no funil",
   prepare_document: "preparou documento",
+  list_unanswered_emails: "leu tua caixa",
+  draft_email_reply: "rascunho no Gmail",
 };
 
 export default function Coach() {
@@ -39,7 +41,30 @@ export default function Coach() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [gmail, setGmail] = useState<{ configured?: boolean; connected?: boolean }>({});
   const bottom = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profile?.email) return;
+    fetch("/api/email-connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: profile.email }),
+    })
+      .then((r) => r.json())
+      .then(setGmail)
+      .catch(() => {});
+  }, [profile?.email]);
+
+  const connectGmail = async () => {
+    const r = await fetch("/api/email-connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: profile.email, action: "initiate" }),
+    });
+    const d = await r.json();
+    if (d.redirectUrl) window.location.href = d.redirectUrl;
+  };
 
   useEffect(() => {
     if (ctx?.history?.length && msgs.length === 0) {
@@ -100,6 +125,15 @@ export default function Coach() {
           <p className="font-mono text-[10px] text-neutral-500">memória: {stats}</p>
         </div>
         <div className="flex gap-3 text-xs">
+          {gmail.configured && (
+            gmail.connected ? (
+              <span className="text-emerald-400">✓ gmail</span>
+            ) : (
+              <button onClick={connectGmail} className="text-amber-400 hover:underline">
+                conectar gmail
+              </button>
+            )
+          )}
           <Link href="/agenda" className="text-emerald-400 hover:underline">agenda</Link>
           <Link href="/prospeccao" className="text-emerald-400 hover:underline">prospecção</Link>
           <Link href="/rider" className="text-emerald-400 hover:underline">rider</Link>
