@@ -1,6 +1,7 @@
 import type { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import type { ToolCall, ToolDef } from "@/lib/llm";
+import { composioConfigured, createDraft, fetchUnreadEmails } from "@/lib/composio";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -12,7 +13,7 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). SÓ converse quando nenhuma tool se aplicar.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
 5. Depois de executar, diga O QUE fez e ONDE o artista vê o resultado (/agenda, /prospeccao, /pipeline).
@@ -121,6 +122,27 @@ export const COACH_TOOLS: ToolDef[] = [
       required: ["kind"],
     },
   },
+  {
+    name: "list_unanswered_emails",
+    description: "Lista os emails não-lidos da caixa do artista (Gmail via Composio) — pra 'que emails preciso responder?'.",
+    parameters: {
+      type: "object",
+      properties: { max: { type: "number", description: "máx de emails, default 10" } },
+    },
+  },
+  {
+    name: "draft_email_reply",
+    description: "Cria RASCUNHO de resposta no Gmail do artista — ele revisa e envia. Nunca envia direto.",
+    parameters: {
+      type: "object",
+      properties: {
+        to: { type: "string", description: "email do destinatário" },
+        subject: { type: "string" },
+        body: { type: "string", description: "corpo do email, tom profissional do artista" },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
 ];
 
 /** Executa uma tool do coach contra o Convex. Retorna texto pro LLM/áudio. */
@@ -172,6 +194,26 @@ export async function runCoachTool(
         prestacao: `/prestacao — seleciona o projeto e gera o Anexo V`,
       };
       return `Documento pronto pra gerar: ${appUrl}${map[String(call.arguments.kind)] ?? "/epk"}`;
+    }
+    case "list_unanswered_emails": {
+      if (!composioConfigured()) {
+        return "Gmail ainda não conectado — falta COMPOSIO_API_KEY + conta conectada. Diz pro artista que é 1 clique de OAuth quando configurado.";
+      }
+      const max = typeof call.arguments.max === "number" ? call.arguments.max : 10;
+      const emails = await fetchUnreadEmails(max);
+      if (!emails.length) return "Caixa zerada — nenhum não-lido. 🤘";
+      return `NÃO-LIDOS (${emails.length}):\n` + emails.map((e, i) => `  ${i + 1}. ${e.from} — "${e.subject}"`).join("\n");
+    }
+    case "draft_email_reply": {
+      if (!composioConfigured()) {
+        return "Gmail ainda não conectado — o rascunho fica pronto no texto, mas pra criar de verdade falta COMPOSIO_API_KEY.";
+      }
+      const id = await createDraft(
+        String(call.arguments.to ?? ""),
+        String(call.arguments.subject ?? ""),
+        String(call.arguments.body ?? "")
+      );
+      return `Rascunho criado no Gmail (${id}) — o artista revisa e envia.`;
     }
     default:
       return `Tool desconhecida: ${call.name}`;
