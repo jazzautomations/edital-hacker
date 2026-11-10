@@ -41,27 +41,33 @@ Ordem = força no julgamento: **execução** (desempate oficial, jurado não tes
 
 ### Bloco 2 — 0:18–1:50 · Demo ao vivo
 
-**0:18–0:28 — persona**
-> Essa é a Lia — cantora e compositora, MEI, de Belo Horizonte. Perfil sintético de demo; os editais, todos reais. O Manager já sabe o que ela é — e o que aceita ela.
+**0:18–0:38 — persona + o momento Jarvis**
+> Essa é a Lia — cantora e compositora, MEI, de Belo Horizonte. Perfil sintético de demo; os editais, todos reais. E o Manager **já conhece a carreira dela**. Ela liga o modo voz e pergunta:
+>
+> *"Quantos shows a gente fechou?"*
+>
+> — *"Três fechados pagos, cinco em negociação — o Sesc Interlagos e o Bar do Zé entre eles — e o edital do ProAC fecha em seis dias. Quer sabatinar?"*
+>
+> O coach responde **por voz, com os dados reais dela** — gigs, leads, prazos. Não é chatbot: ela manda, ele executa.
 
-**0:28–0:42 — radar federado**
-> O radar dela tem **cento e dez oportunidades abertas agora**, coletadas de instâncias Mapas Culturais do Brasil inteiro — MinC, Ceará, Espírito Santo, Goiás, Pará. Cada card mostra fonte, prazo, valor — até cinquenta mil reais — e se o edital aceita pessoa física. Esse aceita. E avisa: **máximo uma proposta por proponente**.
+**0:38–0:48 — radar federado**
+> O radar dela tem **cento e vinte oportunidades abertas agora**, coletadas de trinta fontes Mapas Culturais — MinC, Funarte, estaduais e o long tail municipal do PNAB. Cada card mostra fonte, prazo, valor e se aceita pessoa física.
 
-**0:42–1:12 — sabatina (o momento)**
+**0:48–1:15 — sabatina (o momento)**
 > Antes de se inscrever, a Lia faz a **sabatina**: um parecerista simulado entrevista ela contra a rubrica real do edital. Pergunta difícil — orçamento, contrapartida, trajetória. Resposta vaga? Ele **aprofunda**, não aceita.
 >
 > No fim, o parecer: **setenta e quatro em cem**, os pontos onde ela perderia nota, os documentos que faltam — e o aviso honesto: a decisão final é sempre da banca.
 >
 > O Manager não escreve a proposta pela Lia. **Ele prepara a Lia.**
 
-**1:12–1:22 — Pix**
+**1:15–1:24 — Pix**
 > A segunda sabatina é paga — e o destrave é um Pix de **nove e noventa**. Checkout real, confirmação automática, sabatina liberada na hora.
 
-**1:22–1:34 — pipeline + alertas**
-> O parecer cai no pipeline dela — descoberta, inscrito, ganho, prestação de contas. Documento vencendo? O Manager avisa por email. Uma vez só — nunca duplicado.
+**1:24–1:36 — pipeline + alertas**
+> O parecer cai no pipeline dela — descoberta, inscrito, ganho, prestação de contas. Documento vencendo? O Manager avisa por email, WhatsApp — **e até liga**. Uma vez só — nunca duplicado.
 
-**1:34–1:50 — prospecção → agenda**
-> E edital é só **uma** das fontes de renda. O agente de prospecção caça casas de show, festivais e marcas no nicho e na cidade dela. Lead andou no funil até "fechado"? Vira **gig** na agenda — marcado, feito, **pago** — e o caixa consolida em reais.
+**1:36–1:50 — prospecção → o coach executa**
+> E edital é só **uma** das fontes de renda. *"Me acha casas de show no Rio que tocam MPB"* — o agente sai prospectando na web e os leads caem no funil. Lead andou até "fechado"? Vira **gig** na agenda — marcado, feito, **pago** — e o caixa consolida em reais.
 
 ### Bloco 3 — 1:50–2:22 · Por baixo do capô
 
