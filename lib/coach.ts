@@ -292,6 +292,7 @@ export async function runCoachTool(
         const d = await convex.action(api.dossier.research, {
           targetType: "lead",
           id: String(lead._id),
+          profileId: profile._id,
           name: lead.name,
           city: lead.city,
           uf: lead.uf,
@@ -309,6 +310,7 @@ export async function runCoachTool(
       const d = await convex.action(api.dossier.research, {
         targetType: "opportunity",
         id: String(opp._id),
+        profileId: profile._id,
         name: opp.name,
         sourceUrl: opp.sourceUrl,
         hint: `${profile.name} — ${profile.artAreas?.join(", ") ?? ""}`,
