@@ -140,3 +140,19 @@
 - **Fonte**: pesquisa sponsors + artefatos 09/11 (fontes primárias listadas nos relatórios).
 - **Afeta**: `convex/monitors.ts`, `convex/http.ts`, `convex/digest.ts`, `convex/crons.ts`, `lib/firecrawl.ts` (createMonitor), `app/api/voice-session`, `app/api/voice-verdict`, `app/epk`, `app/api/contrato`, `app/agenda` (check-in in-app).
 - **Reversível?**: Sim — tudo aditivo, nada remove o que funciona.
+
+## D018 — 2026-11-10 — Mapa verificado de agências/showcases vira lead pronto
+
+- **Decisão**: Prospecção ganha tipo `agencia`/`prefeitura` e um seed verificado (`lib/agencySeed.ts`): 16 agências BR + 7 feiras de showcase gratuitas + marketplaces — cada lead com gatekeeper nomeado, contato público e ângulo de rapport. Botão "🗺 Mapa de agências" em `/prospeccao` planta tudo no funil via `leads.seedMapa` (dedupe). Regras de mercado viram `AGENCY_INTEL` na memória do coach.
+- **Motivo**: pesquisa OSINT verificou que (1) escritório 360 BR cobra ~50% do cachê em contrato de 5–10 anos c/ multa milionária — âncora do pitch corrige 20%→50%; (2) o destino documentado dos grandes é empresa própria (Anitta, Ivete, Ludmilla, Luan) — o produto se posiciona como "empresa própria de prateleira"; (3) showcase gratuito (SIM/FIMS/Porto Musical) é o lead mais barato que existe — inscrição põe o artista na frente de selos e bookers sem intermediário.
+- **Fonte**: `specs/001-ai-artist-manager/research-agencias.md` — 2 dossiês com fonte primária (G1, Billboard, Pollstar, sites das agências, form.simsaopaulo.com, fims.com.br, womex.com).
+- **Afeta**: `lib/agencySeed.ts`, `convex/leads.ts` (seedMapa), `app/prospeccao`, `lib/coach.ts` (intel no contextBlock), `pitch-video.md` (âncora de preço).
+- **Reversível?**: Sim — seed é snapshot dez/2026; dossiê OSINT por lead continua fonte atualizada.
+
+## D019 — 2026-11-10 — Vigia de documentos com validades canônicas
+
+- **Decisão**: `lib/docRules.ts` codifica as validades reais verificadas (CRF-FGTS 30d → emitir na semana da entrega; CND federal/CNDT 180d; comprovante endereço 90d; 3 NFs <12m p/ inexigibilidade art. 23 §4º; CNAE-MEI compatível). O coach recebe cada doc vencendo + a regra correspondente no contexto; `/agenda` mostra o hint e link "emitir →".
+- **Motivo**: 63/83 projetos indeferidos por formalidade no Linc Sorocaba — certidão vencida é a falha nº1 e custa a inscrição. Regra de ouro: FGTS dura 30d, nunca emitir junto com as federais.
+- **Fonte**: pesquisa domínio 09/11 (prazos oficiais dos órgãos emissores) + stat formalidade.
+- **Afeta**: `lib/docRules.ts`, `lib/coach.ts` (contextBlock), `app/agenda`.
+- **Reversível?**: Sim — tabela de regras é dado, não código.
