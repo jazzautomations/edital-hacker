@@ -76,11 +76,14 @@ export async function fetchInbox(userId: string, query = "in:inbox is:unread", m
   const r = await execute("GMAIL_FETCH_EMAILS", userId, {
     query,
     max_results: max,
-    verbose: true,
+    verbose: false, // verbose:true pode retornar messages:[] (issue #2187)
   });
   const raw = r?.data ?? r;
   const msgs = raw?.messages ?? raw?.emails ?? raw?.response_data?.messages ?? [];
-  return (Array.isArray(msgs) ? msgs : []).slice(0, max).map((m: any) => {
+  return (Array.isArray(msgs) ? msgs : [])
+    .sort((a: any, b: any) => Number(b.internalDate ?? b.messageTimestamp ?? 0) - Number(a.internalDate ?? a.messageTimestamp ?? 0))
+    .slice(0, max)
+    .map((m: any) => {
     const from = m.from ?? m.sender ?? m.From ?? m.payload?.from ?? "";
     const emailMatch = String(from).match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
     return {
@@ -105,9 +108,9 @@ export async function createDraft(
 ): Promise<string> {
   const r = await execute("GMAIL_CREATE_EMAIL_DRAFT", userId, {
     recipient_email: to,
-    subject,
     body,
-    ...(threadId ? { thread_id: threadId } : {}),
+    // dentro de thread: omitir subject pra reply ficar na conversa certa
+    ...(threadId ? { thread_id: threadId } : { subject }),
   });
   const d = r?.data ?? r;
   return d?.draft_id ?? d?.id ?? "rascunho criado";
@@ -132,10 +135,12 @@ export interface CalEvent {
 
 /** Lê eventos do Google Calendar do artista — pra "tenho algo dia X?". */
 export async function listCalendarEvents(userId: string, timeMin: string, timeMax: string): Promise<CalEvent[]> {
-  const r = await execute("GOOGLECALENDAR_LIST_EVENTS", userId, {
+  const r = await execute("GOOGLECALENDAR_EVENTS_LIST", userId, {
+    calendarId: "primary",
     timeMin,
     timeMax,
-    max_results: 20,
+    singleEvents: true,
+    orderBy: "startTime",
   });
   const raw = r?.data ?? r;
   const items = raw?.items ?? raw?.events ?? raw?.response_data?.items ?? [];
@@ -160,9 +165,26 @@ export async function createCalendarEvent(
     start_datetime: ev.startISO,
     event_duration_hour: durH,
     event_duration_minutes: durM,
+    send_updates: "none", // default "all" emaila os attendees — nunca
   });
   const d = r?.data ?? r;
   return d?.id ?? d?.event_id ?? "evento criado";
+}
+
+/** Liga o trigger GMAIL_NEW_GMAIL_MESSAGE (polling 2min) → webhook Composio.
+ *  Idempotente (upsert) — chamar quando a conta Gmail estiver ACTIVE. */
+export async function enableGmailTrigger(userId: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${API}/trigger_instances/GMAIL_NEW_GMAIL_MESSAGE/upsert`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      user_id: userId,
+      trigger_config: { labelIds: "INBOX" },
+      polling_interval: 2,
+    }),
+  });
+  if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${(await res.text()).slice(0, 150)}` };
+  return { ok: true };
 }
 
 export async function linkCalendar(userId: string, callbackUrl: string): Promise<{ redirectUrl?: string; error?: string }> {

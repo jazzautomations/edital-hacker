@@ -31,12 +31,14 @@ export const research = action({
     hint: v.optional(v.string()), // contexto do artista
   },
   handler: async (ctx, args) => {
+    // Firecrawl bloqueia Instagram/TikTok — Sympla expõe agenda+produtora+preço.
     const queries =
       args.targetType === "lead"
         ? [
-            `"${args.name}" ${args.city ?? ""} ${args.uf ?? ""} ${args.kind === "casa_de_show" ? "casa de shows programação agenda" : args.kind ?? "contratante"}`,
+            `"${args.name}" ${args.city ?? ""} ${args.uf ?? ""} ${args.kind === "casa_de_show" ? "casa de shows agenda programação" : args.kind ?? "contratante"}`,
+            `"${args.name}" sympla eventos`,
             `"${args.name}" booking contato produção cachê`,
-            `site:instagram.com "${args.name}" ${args.city ?? ""}`,
+            ...(args.kind === "marca" ? [`"${args.name}" patrocínio incentivo cultural salic versalic`] : []),
           ]
         : [
             `"${args.name}" edital resultados anteriores contemplados aprovados`,
@@ -52,7 +54,7 @@ export const research = action({
         sources.push(args.sourceUrl);
       } catch { /* site fora do ar — segue com search */ }
     }
-    for (const q of queries.slice(0, 3)) {
+    for (const q of queries.slice(0, 4)) {
       try {
         const r = await searchMarkdown(q, 3);
         if (r.markdown) chunks.push(r.markdown);

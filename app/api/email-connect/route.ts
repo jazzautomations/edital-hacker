@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { calendarConfigured, calendarStatus, composioConfigured, gmailStatus, linkCalendar, linkGmail } from "@/lib/composio";
+import { calendarConfigured, calendarStatus, composioConfigured, enableGmailTrigger, gmailStatus, linkCalendar, linkGmail } from "@/lib/composio";
 
 // Conexão Gmail via Composio OAuth managed. O artista clica "Conectar Gmail"
 // → devolvemos a redirect_url → ele autoriza → volta com callback.
@@ -21,6 +21,8 @@ export async function POST(req: Request) {
   }
 
   const st = await gmailStatus(email);
+  // conectou? liga o trigger quase-tempo-real (upsert idempotente, fire-and-forget)
+  if (st.connected) enableGmailTrigger(email).catch(() => {});
   const cal = calendarConfigured() ? await calendarStatus(email) : false;
   return NextResponse.json({ configured: true, calendarConfigured: calendarConfigured(), ...st, calendar: cal });
 }

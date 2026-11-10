@@ -55,6 +55,13 @@ export default function Prospeccao() {
     profile ? { profileId: profile._id as any } : "skip"
   ) as Lead[] | undefined;
 
+  const pending = useQuery(
+    api.pendingActions.listPending,
+    profile ? { profileId: profile._id as any } : "skip"
+  ) as { _id: string; label: string; description?: string }[] | undefined;
+  const applyAction = useMutation(api.pendingActions.apply);
+  const dismissAction = useMutation(api.pendingActions.dismiss);
+
   const prospect = useAction(api.discover.prospectLeads);
   const setStatus = useMutation(api.leads.setStatus);
   const removeLead = useMutation(api.leads.remove);
@@ -130,6 +137,38 @@ export default function Prospeccao() {
           O agente caça quem contrata você — casas de show, festivais, marcas, escolas — e vira funil de carreira.
         </p>
       </header>
+
+      {pending?.length ? (
+        <section className="mb-8 rounded-2xl border border-violet-800 bg-violet-950/30 p-5">
+          <h2 className="mb-3 text-sm font-bold text-violet-300">
+            ⚡ O coach propõe — você decide ({pending.length})
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {pending.map((p) => (
+              <li key={p._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-neutral-900/60 px-4 py-3">
+                <div>
+                  <p className="text-sm">{p.label}</p>
+                  {p.description && <p className="text-xs text-neutral-500">{p.description}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => applyAction({ id: p._id as any })}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold"
+                  >
+                    aplicar
+                  </button>
+                  <button
+                    onClick={() => dismissAction({ id: p._id as any })}
+                    className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs"
+                  >
+                    ignorar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="mb-8 rounded-2xl border border-neutral-800 p-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">

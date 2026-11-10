@@ -17,7 +17,7 @@ const INTENT_TO_STAGE: Record<string, string> = {
 
 const CLASSIFY_SYSTEM = `Você classifica respostas de emails comerciais recebidos por um artista brasileiro.
 Para cada email, diga a intenção do remetente: "interessado" (respondeu querendo conversar/pediu info), "negociando" (falando de valores/condições/data), "confirmado" (fechou/data acertada), "recusou" (disse não/sem interesse), ou "neutro" (newsletter, automático, nada a ver).
-Responda SÓ JSON: {"emails": [{"index": N, "intent": "..."}]}`;
+Responda SÓ JSON: {"emails": [{"index": N, "intent": "...", "confidence": 0-100, "summary": "1 frase curta"}]}`;
 
 export async function POST(req: Request) {
   const secret = req.headers.get("x-notify-secret");
@@ -58,21 +58,29 @@ export async function POST(req: Request) {
 
   if (!hits.length) return NextResponse.json({ connected: true, moved: [], checked: inbox.length });
 
-  const classify = await jsonChat<{ emails: { index: number; intent: string }[] }>(
+  const classify = await jsonChat<{ emails: { index: number; intent: string; confidence?: number; summary?: string }[] }>(
     CLASSIFY_SYSTEM,
     hits
       .map((h, i) => `[${i}] de: ${h.msg.from} | lead: ${h.lead.name}\nassunto: ${h.msg.subject}\n${h.msg.snippet}`)
       .join("\n\n---\n\n")
   );
 
-  const moved: { lead: string; stage: string }[] = [];
+  // O agente propõe, o humano decide: grava pendingAction (confiança ≥55),
+  // artista confirma em /prospeccao — nenhum stage move sem clique.
+  const proposals: { lead: string; intent: string; summary?: string }[] = [];
   for (const c of classify?.emails ?? []) {
     const hit = hits[c.index];
     const stage = INTENT_TO_STAGE[c.intent];
-    if (!hit || !stage) continue;
-    await convex.mutation(api.leads.setStatus, { id: hit.lead._id, status: stage });
-    moved.push({ lead: hit.lead.name, stage });
+    if (!hit || !stage || (c.confidence ?? 0) < 55) continue;
+    await convex.mutation(api.pendingActions.propose, {
+      profileId: profile._id,
+      type: "move_lead_stage",
+      label: `${hit.lead.name} respondeu — ${c.intent} → mover pra "${stage}"?`,
+      description: `${c.summary ?? hit.msg.subject} · de ${hit.msg.fromEmail}`,
+      payload: { leadId: hit.lead._id, stage, intent: c.intent },
+    });
+    proposals.push({ lead: hit.lead.name, intent: c.intent, summary: c.summary });
   }
 
-  return NextResponse.json({ connected: true, checked: inbox.length, moved });
+  return NextResponse.json({ connected: true, checked: inbox.length, proposals });
 }

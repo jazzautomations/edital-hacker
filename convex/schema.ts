@@ -147,6 +147,17 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_profile", ["profileId"]),
 
+  // O agente propõe, o humano decide (padrão agent_pending_actions do 360AA).
+  pendingActions: defineTable({
+    profileId: v.id("profiles"),
+    type: v.string(), // move_lead_stage | ...
+    label: v.string(), // "Sesc respondeu — interessado → mover pra negociando?"
+    description: v.optional(v.string()),
+    payload: v.optional(v.any()),
+    status: v.string(), // pending | applied | dismissed
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId", "status"]),
+
   gigs: defineTable({
     profileId: v.id("profiles"),
     leadId: v.optional(v.id("leads")),
