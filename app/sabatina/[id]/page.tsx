@@ -8,6 +8,7 @@ import Link from "next/link";
 import type { SabatinaContext, ChatTurn } from "@/lib/llm";
 import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
 import VoiceSabatina from "@/components/VoiceSabatina";
+import { useAuthEmail } from "@/lib/useAuth";
 
 interface Msg {
   role: "user" | "model";
@@ -35,9 +36,7 @@ export default function Sabatina({
   const opp = useQuery(api.opportunities.get, { id: oppId }) as
     | Opportunity | null | undefined;
 
-  const [email, setEmail] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email, setEmail, locked, authEnabled } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
     | Profile | null | undefined;
   const planStatus = useQuery(
@@ -217,10 +216,11 @@ export default function Sabatina({
               </p>
             )}
             <input
-              className="rounded-lg bg-neutral-900 px-3 py-2 text-sm"
+              className="rounded-lg bg-neutral-900 px-3 py-2 text-sm disabled:opacity-60"
               placeholder="seu@email.com (salva seu histórico)"
               type="email"
               value={email}
+              disabled={locked}
               onChange={(e) => setEmail(e.target.value)}
             />
             <input

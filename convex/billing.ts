@@ -100,7 +100,10 @@ export const applyEvent = internalMutation({
       const profileId = externalId as any;
       const profile = (profileId ? await ctx.db.get(profileId) : null) as any;
       if (!profile || !("plan" in profile)) return { ignored: "unknown externalId" };
-      const active = args.kind === "subscription.cancelled" ? "CANCELLED" : "ACTIVE";
+      const active =
+        args.kind === "subscription.cancelled" ? "CANCELLED"
+        : args.kind === "subscription.payment_failed" ? "PAST_DUE"
+        : "ACTIVE";
       const existing = await ctx.db
         .query("subscriptions")
         .withIndex("by_profile", (q) => q.eq("profileId", profileId))
@@ -118,7 +121,7 @@ export const applyEvent = internalMutation({
       if (mine) await ctx.db.patch(mine._id, rec);
       else await ctx.db.insert("subscriptions", rec);
       await ctx.db.patch(profileId, {
-        plan: active === "ACTIVE" ? rec.plan : "free",
+        plan: active === "ACTIVE" ? rec.plan : active === "CANCELLED" ? "free" : profile.plan,
       });
       return { applied: args.kind, status: active };
     }

@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
+import { useAuthEmail } from "@/lib/useAuth";
 
 function deadlineBadge(registrationTo?: string) {
   if (!registrationTo) return null;
@@ -21,9 +22,7 @@ function deadlineBadge(registrationTo?: string) {
 }
 
 export default function Oportunidades() {
-  const [email] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
     | Profile | null | undefined;
   const addToPipeline = useMutation(api.pipeline.add);

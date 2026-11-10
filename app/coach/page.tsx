@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import VoiceSabatina from "@/components/VoiceSabatina";
+import { useAuthEmail } from "@/lib/useAuth";
 
 // O Coach — chat com memória total da carreira. É a promessa central:
 // um mentor que sabe teus cachês, teus leads, teus prazos e tuas sabatinas
@@ -33,9 +34,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 export default function Coach() {
-  const [email, setEmail] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email, setEmail, locked, authEnabled } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
   const ctx = useQuery(
     api.riders.coachContext,
@@ -84,6 +83,11 @@ export default function Coach() {
         <p className="text-sm text-neutral-400">
           O mentor que lembra de tudo — teus cachês, leads, prazos e sabatinas.
         </p>
+        {authEnabled && !locked && (
+            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
+              Entrar com WorkOS &rarr;
+            </a>
+          )}
         <form className="flex flex-col gap-3"
           onSubmit={(e) => { e.preventDefault(); localStorage.setItem("manager_email", email); setEmail(email); }}>
           <input className="rounded-xl bg-neutral-900 px-4 py-3" placeholder="seu@email.com" type="email"

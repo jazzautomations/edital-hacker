@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import type { Profile } from "@/lib/types";
+import { useAuthEmail } from "@/lib/useAuth";
 
 const PLANS = [
   {
@@ -27,9 +28,7 @@ const PLANS = [
 function Inner() {
   const params = useSearchParams();
   const unlockOpp = params.get("unlock"); // opportunityId p/ avulso
-  const [email, setEmail] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email, setEmail, locked, authEnabled } = useAuthEmail();
   const [cycle, setCycle] = useState<"MONTHLY" | "ANNUALLY">("MONTHLY");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,11 +79,20 @@ function Inner() {
       </p>
 
       <div className="mt-6 flex items-center gap-3">
+        {authEnabled && !locked && (
+          <a
+            href="/login"
+            className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-black"
+          >
+            Entrar com WorkOS →
+          </a>
+        )}
         <input
-          className="w-64 rounded-xl bg-neutral-900 px-4 py-2 text-sm"
+          className="w-64 rounded-xl bg-neutral-900 px-4 py-2 text-sm disabled:opacity-60"
           placeholder="seu@email.com"
           type="email"
           value={email}
+          disabled={locked}
           onChange={(e) => {
             setEmail(e.target.value);
             localStorage.setItem("manager_email", e.target.value);

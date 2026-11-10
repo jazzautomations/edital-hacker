@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import type { Profile } from "@/lib/types";
+import { useAuthEmail } from "@/lib/useAuth";
 
 const LEAD_TYPES = [
   "casa_de_show",
@@ -49,9 +50,7 @@ type Lead = {
 };
 
 export default function Prospeccao() {
-  const [email, setEmail] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email, setEmail, locked, authEnabled } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
     | Profile | null | undefined;
   const leads = useQuery(
@@ -107,6 +106,11 @@ export default function Prospeccao() {
         <p className="text-sm text-neutral-400">
           Entre com seu email pra carregar seu perfil antes de caçar leads.
         </p>
+        {authEnabled && !locked && (
+            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
+              Entrar com WorkOS &rarr;
+            </a>
+          )}
         <form
           className="flex flex-col gap-3"
           onSubmit={(e) => {

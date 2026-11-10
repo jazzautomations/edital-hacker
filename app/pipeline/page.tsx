@@ -6,6 +6,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useState } from "react";
 import type { PipelineItem, Profile } from "@/lib/types";
+import { useAuthEmail } from "@/lib/useAuth";
 
 interface Doc {
   _id: string;
@@ -32,9 +33,7 @@ const STAGES: { key: string; label: string }[] = [
 ];
 
 export default function Pipeline() {
-  const [email, setEmail] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email, setEmail, locked, authEnabled } = useAuthEmail();
   const [creating, setCreating] = useState(false);
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
     | Profile
@@ -71,6 +70,11 @@ export default function Pipeline() {
         <p className="text-sm text-neutral-400">
           Entre com seu email pra criar (ou achar) seu perfil de artista.
         </p>
+        {authEnabled && !locked && (
+            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
+              Entrar com WorkOS &rarr;
+            </a>
+          )}
         <form
           className="flex flex-col gap-3"
           onSubmit={async (e) => {

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
+import { useAuthEmail } from "@/lib/useAuth";
 
 // Prestação de contas — o "depois" que todo edital exige e ninguém ajuda.
 // Gera o Relatório de Objeto (modelo Anexo V PNAB) em PDF pra colar no Mapas.
@@ -23,9 +24,7 @@ const FIELDS: { key: string; label: string; hint: string; rows?: number }[] = [
 ];
 
 export default function Prestacao() {
-  const [email, setEmail] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("manager_email") ?? "" : ""
-  );
+  const { email, setEmail, locked, authEnabled } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
   const items = useQuery(
     api.pipeline.listForProfile,
@@ -42,6 +41,11 @@ export default function Prestacao() {
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
         <h1 className="text-2xl font-bold">Prestação de contas</h1>
         <p className="text-sm text-neutral-400">Entre com seu email pra gerar o relatório.</p>
+        {authEnabled && !locked && (
+            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
+              Entrar com WorkOS &rarr;
+            </a>
+          )}
         <form
           className="flex flex-col gap-3"
           onSubmit={(e) => { e.preventDefault(); localStorage.setItem("manager_email", email); setEmail(email); }}

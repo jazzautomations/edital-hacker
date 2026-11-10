@@ -124,9 +124,22 @@ ABACATE_PRODUCT_PRO_ANNUAL=        # 🔁
 
 `.env.local` já tem `CONVEX_DEPLOYMENT` + `NEXT_PUBLIC_CONVEX_URL` — `npx convex dev` já rodou.
 
-## 10. Fase 2 / opcional (pula se quiser)
+## 10. WorkOS — auth real (sponsor; AuthKit já codado)
 
-- `WORKOS_CLIENT_ID/API_KEY/COOKIE_PASSWORD` — AuthKit (sponsor). Login hoje é por email simples.
+dashboard.workos.com → API Keys → cria o client. No painel, configura o
+**Redirect URI**: `http://localhost:3000/callback` (dev) + `<APP_URL>/callback` (prod).
+
+```bash
+WORKOS_CLIENT_ID=               # client_...
+WORKOS_API_KEY=                 # sk_...
+WORKOS_COOKIE_PASSWORD=         # openssl rand -hex 32
+NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3000/callback
+```
+
+Sem essas chaves o app cai no modo demo (email → perfil) — não quebra.
+
+## 11. Fase 2 / opcional (pula se quiser)
+
 - `NVOIP_*` — SMS/voz/WABA oficial (produção). Demo usa Evolution.
 - `FIRECRAWL_WEBHOOK_SECRET` — só se ligar monitor de fonte bloqueada. 🔁
 - `NVOIP_WEBHOOK_SECRET` — 🔁
