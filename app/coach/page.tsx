@@ -26,6 +26,9 @@ const ACTION_LABEL: Record<string, string> = {
   prepare_document: "preparou documento",
   list_unanswered_emails: "leu tua caixa",
   draft_email_reply: "rascunho no Gmail",
+  research_target: "montou dossiê OSINT",
+  check_calendar: "leu o Calendar",
+  sync_gig_to_calendar: "jogou no Calendar",
 };
 
 export default function Coach() {
@@ -56,11 +59,11 @@ export default function Coach() {
       .catch(() => {});
   }, [profile?.email]);
 
-  const connectGmail = async () => {
+  const connectGmail = async (action = "initiate") => {
     const r = await fetch("/api/email-connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: profile.email, action: "initiate" }),
+      body: JSON.stringify({ email: profile.email, action }),
     });
     const d = await r.json();
     if (d.redirectUrl) window.location.href = d.redirectUrl;
@@ -129,8 +132,17 @@ export default function Coach() {
             gmail.connected ? (
               <span className="text-emerald-400">✓ gmail</span>
             ) : (
-              <button onClick={connectGmail} className="text-amber-400 hover:underline">
+              <button onClick={() => connectGmail("initiate")} className="text-amber-400 hover:underline">
                 conectar gmail
+              </button>
+            )
+          )}
+          {(gmail as any).calendarConfigured && (
+            (gmail as any).calendar ? (
+              <span className="text-emerald-400">✓ agenda</span>
+            ) : (
+              <button onClick={() => connectGmail("initiate_calendar")} className="text-amber-400 hover:underline">
+                conectar agenda
               </button>
             )
           )}

@@ -1,7 +1,16 @@
 import type { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import type { ToolCall, ToolDef } from "@/lib/llm";
-import { composioConfigured, createDraft, fetchInbox, gmailStatus } from "@/lib/composio";
+import {
+  calendarConfigured,
+  calendarStatus,
+  composioConfigured,
+  createCalendarEvent,
+  createDraft,
+  fetchInbox,
+  gmailStatus,
+  listCalendarEvents,
+} from "@/lib/composio";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -13,7 +22,8 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. SÓ converse quando nenhuma tool se aplicar.
+2b. RAPPORT É LEI: antes de redigir email de abordagem ou proposta pra um lead/edital, chama research_target se o dossiê ainda não existir — e SEMPRE use os ganchos de rapport do dossiê no texto (citar show recente, linguagem deles, projeto específico). Email genérico é spam.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
 5. Depois de executar, diga O QUE fez e ONDE o artista vê o resultado (/agenda, /prospeccao, /pipeline).
@@ -45,6 +55,20 @@ export function contextBlock(c: any): string {
     lines.push(`LEADS COMERCIAIS (${leads.length}):`);
     for (const l of leads.slice(0, 15)) {
       lines.push(`  · [${l.status}] ${l.name} — ${l.kind}${l.city ? ` · ${l.city}` : ""}${l.contact ? ` · ${l.contact}` : ""}`);
+    }
+    const dossiers = leads.filter((l: any) => l.dossier);
+    if (dossiers.length) {
+      lines.push(`DOSSIÊS (OSINT — use os ganchos de rapport ao redigir abordagem/email):`);
+      for (const l of dossiers.slice(0, 8)) {
+        lines.push(`  · ${l.name}: ${String(l.dossier).slice(0, 500)}`);
+      }
+    }
+  }
+  const oppsWithIntel = (c.pipeline ?? []).filter((i: any) => i.opportunity?.intel);
+  if (oppsWithIntel.length) {
+    lines.push(`INTEL DE EDITAIS (OSINT do financiador — use na sabatina/proposta):`);
+    for (const i of oppsWithIntel.slice(0, 5)) {
+      lines.push(`  · ${i.opportunity.name}: ${String(i.opportunity.intel).slice(0, 400)}`);
     }
   }
   const gigs = c.gigs ?? [];
@@ -138,9 +162,48 @@ export const COACH_TOOLS: ToolDef[] = [
       properties: {
         to: { type: "string", description: "email do destinatário" },
         subject: { type: "string" },
-        body: { type: "string", description: "corpo do email, tom profissional do artista" },
+        body: { type: "string", description: "corpo do email, tom profissional do artista — usa gancho de rapport do dossiê se houver" },
       },
       required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "research_target",
+    description: "Monta DOSSIÊ OSINT de um alvo antes da abordagem — pesquisa web sobre o contratante (lead do funil) ou financiador (edital do pipeline) e salva ganchos de rapport. Leva ~30s. Use ANTES de redigir email/proposta se o dossiê não existir.",
+    parameters: {
+      type: "object",
+      properties: {
+        target: { type: "string", enum: ["lead", "edital"] },
+        name: { type: "string", description: "nome (ou parte) do lead ou do edital" },
+      },
+      required: ["target", "name"],
+    },
+  },
+  {
+    name: "check_calendar",
+    description: "Lê o Google Calendar do artista pra checar disponibilidade/conflito num período (precisa estar conectado).",
+    parameters: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "ISO, ex: 2026-12-01" },
+        to: { type: "string", description: "ISO, ex: 2026-12-15" },
+      },
+      required: ["from", "to"],
+    },
+  },
+  {
+    name: "sync_gig_to_calendar",
+    description: "Empurra um gig/evento pro Google Calendar do artista (precisa estar conectado).",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        date: { type: "string", description: "ISO com hora, ex: 2026-12-15T20:00:00-03:00" },
+        venue: { type: "string" },
+        durationMin: { type: "number", description: "duração em minutos, default 120" },
+        notes: { type: "string" },
+      },
+      required: ["title", "date"],
     },
   },
 ];
@@ -217,6 +280,62 @@ export async function runCoachTool(
         String(call.arguments.body ?? "")
       );
       return `Rascunho criado no Gmail (${id}) — o artista revisa e envia.`;
+    }
+    case "research_target": {
+      const target = String(call.arguments.target);
+      const needle = String(call.arguments.name ?? "").toLowerCase();
+      if (target === "lead") {
+        const leads = (await convex.query(api.leads.listForProfile, { profileId: profile._id })) as any[];
+        const lead = leads.find((l) => l.name.toLowerCase().includes(needle));
+        if (!lead) return `Lead "${call.arguments.name}" não tá no funil — confere o nome ou prospecta primeiro.`;
+        if (lead.dossier) return `Dossiê de ${lead.name} já existe:\n${lead.dossier.slice(0, 1200)}`;
+        const d = await convex.action(api.dossier.research, {
+          targetType: "lead",
+          id: String(lead._id),
+          name: lead.name,
+          city: lead.city,
+          uf: lead.uf,
+          kind: lead.kind,
+          sourceUrl: lead.sourceUrl,
+          hint: `${profile.name} — ${profile.artAreas?.join(", ") ?? ""}`,
+        });
+        return `Dossiê pronto e salvo no lead:\n${String(d).slice(0, 1200)}`;
+      }
+      const pipeline = (await convex.query(api.pipeline.listForProfile, { profileId: profile._id })) as any[];
+      const item = pipeline.find((i: any) => i.opportunity?.name?.toLowerCase().includes(needle));
+      if (!item?.opportunity) return `Edital "${call.arguments.name}" não tá no pipeline.`;
+      const opp = item.opportunity;
+      if (opp.intel) return `Intel de "${opp.name}" já existe:\n${String(opp.intel).slice(0, 1200)}`;
+      const d = await convex.action(api.dossier.research, {
+        targetType: "opportunity",
+        id: String(opp._id),
+        name: opp.name,
+        sourceUrl: opp.sourceUrl,
+        hint: `${profile.name} — ${profile.artAreas?.join(", ") ?? ""}`,
+      });
+      return `Intel do financiador pronta e salva no edital:\n${String(d).slice(0, 1200)}`;
+    }
+    case "check_calendar": {
+      if (!calendarConfigured()) return "Calendar não configurado — falta COMPOSIO_CALENDAR_AUTH_CONFIG.";
+      if (!(await calendarStatus(profileEmail))) return `Calendar não conectado — vai em /coach e clica "conectar agenda".`;
+      const from = String(call.arguments.from);
+      const to = String(call.arguments.to);
+      const events = await listCalendarEvents(profileEmail, from, to);
+      if (!events.length) return `Agenda livre entre ${from.slice(0, 10)} e ${to.slice(0, 10)}. 🤘`;
+      return `EVENTOS (${events.length}) ${from.slice(0, 10)} → ${to.slice(0, 10)}:\n` +
+        events.map((e) => `  · ${e.start?.slice(0, 16) ?? "?"} ${e.summary}`).join("\n");
+    }
+    case "sync_gig_to_calendar": {
+      if (!calendarConfigured()) return "Calendar não configurado — falta COMPOSIO_CALENDAR_AUTH_CONFIG.";
+      if (!(await calendarStatus(profileEmail))) return `Calendar não conectado — vai em /coach e clica "conectar agenda".`;
+      const id = await createCalendarEvent(profileEmail, {
+        summary: `${call.arguments.title} · Manager`,
+        startISO: String(call.arguments.date),
+        location: String(call.arguments.venue ?? ""),
+        durationMin: typeof call.arguments.durationMin === "number" ? call.arguments.durationMin : 120,
+        description: String(call.arguments.notes ?? ""),
+      });
+      return `No Google Calendar (${id}) — ${call.arguments.title} em ${String(call.arguments.date).slice(0, 16)}.`;
     }
     default:
       return `Tool desconhecida: ${call.name}`;

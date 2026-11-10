@@ -85,6 +85,13 @@ export const upsert = internalMutation({
   },
 });
 
+export const setIntel = internalMutation({
+  args: { id: v.id("opportunities"), intel: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { intel: args.intel, intelAt: Date.now() });
+  },
+});
+
 export const setEnriched = internalMutation({
   args: {
     id: v.id("opportunities"),

@@ -20,6 +20,30 @@ export async function scrapeMarkdown(url: string): Promise<string> {
   return md;
 }
 
+/** Busca web-wide + scrape dos top resultados → markdown consolidado (OSINT). */
+export async function searchMarkdown(query: string, limit = 3): Promise<{ markdown: string; sources: string[] }> {
+  const res = await fetch(`${BASE}/search`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      limit,
+      scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+    }),
+  });
+  if (!res.ok) throw new Error(`Firecrawl search HTTP ${res.status}`);
+  const json = await res.json();
+  const items = json?.data ?? [];
+  const sources: string[] = [];
+  const parts: string[] = [];
+  for (const it of Array.isArray(items) ? items : []) {
+    if (it.url) sources.push(it.url);
+    const md = it.markdown ?? it.description ?? "";
+    if (md) parts.push(`### ${it.title ?? it.url}\n${String(md).slice(0, 4000)}`);
+  }
+  return { markdown: parts.join("\n\n").slice(0, 12000), sources };
+}
+
 export interface DiscoveredOpportunity {
   name: string;
   sourceUrl: string;

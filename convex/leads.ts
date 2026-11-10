@@ -82,6 +82,13 @@ export const setStatus = mutation({
   },
 });
 
+export const setDossier = internalMutation({
+  args: { id: v.id("leads"), dossier: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { dossier: args.dossier, dossierAt: Date.now(), updatedAt: Date.now() });
+  },
+});
+
 export const setNotes = mutation({
   args: { id: v.id("leads"), notes: v.string() },
   handler: async (ctx, args) => {

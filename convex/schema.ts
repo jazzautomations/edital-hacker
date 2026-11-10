@@ -20,6 +20,8 @@ export default defineSchema({
     sourceUrl: v.string(),
     status: v.string(),
     rawMarkdown: v.optional(v.string()),
+    intel: v.optional(v.string()), // OSINT do financiador: histórico, o que costuma passar
+    intelAt: v.optional(v.number()),
     enriched: v.optional(
       v.object({
         summary: v.optional(v.string()),
@@ -139,6 +141,8 @@ export default defineSchema({
     description: v.optional(v.string()),
     status: v.string(), // novo | contatado | respondeu | negociando | fechado | perdido
     notes: v.optional(v.string()),
+    dossier: v.optional(v.string()), // OSINT: o que programam, vibe, ganchos de rapport
+    dossierAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_profile", ["profileId"]),

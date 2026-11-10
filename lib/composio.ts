@@ -11,6 +11,10 @@ export function composioConfigured(): boolean {
   return Boolean(process.env.COMPOSIO_API_KEY && process.env.COMPOSIO_GMAIL_AUTH_CONFIG);
 }
 
+export function calendarConfigured(): boolean {
+  return Boolean(process.env.COMPOSIO_API_KEY && process.env.COMPOSIO_CALENDAR_AUTH_CONFIG);
+}
+
 function headers() {
   return {
     "x-api-key": process.env.COMPOSIO_API_KEY!,
@@ -107,4 +111,71 @@ export async function createDraft(
   });
   const d = r?.data ?? r;
   return d?.draft_id ?? d?.id ?? "rascunho criado";
+}
+
+// ---- Google Calendar (auth config separada — toolkit próprio no Composio) ----
+
+export async function calendarStatus(userId: string): Promise<boolean> {
+  const res = await fetch(
+    `${API}/connected_accounts?user_ids=${encodeURIComponent(userId)}&auth_config_ids=${process.env.COMPOSIO_CALENDAR_AUTH_CONFIG}&statuses=ACTIVE`,
+    { headers: headers() }
+  );
+  const data = await res.json().catch(() => ({}));
+  return Boolean((data?.items ?? []).length);
+}
+
+export interface CalEvent {
+  summary: string;
+  start?: string;
+  end?: string;
+}
+
+/** Lê eventos do Google Calendar do artista — pra "tenho algo dia X?". */
+export async function listCalendarEvents(userId: string, timeMin: string, timeMax: string): Promise<CalEvent[]> {
+  const r = await execute("GOOGLECALENDAR_LIST_EVENTS", userId, {
+    timeMin,
+    timeMax,
+    max_results: 20,
+  });
+  const raw = r?.data ?? r;
+  const items = raw?.items ?? raw?.events ?? raw?.response_data?.items ?? [];
+  return (Array.isArray(items) ? items : []).slice(0, 20).map((e: any) => ({
+    summary: String(e.summary ?? e.title ?? "(sem título)"),
+    start: e.start?.dateTime ?? e.start?.date ?? undefined,
+    end: e.end?.dateTime ?? e.end?.date ?? undefined,
+  }));
+}
+
+/** Empurra gig pro Google Calendar — padrão verificado no 360AA. */
+export async function createCalendarEvent(
+  userId: string,
+  ev: { summary: string; description?: string; location?: string; startISO: string; durationMin?: number }
+): Promise<string> {
+  const durH = Math.floor((ev.durationMin ?? 120) / 60);
+  const durM = (ev.durationMin ?? 120) % 60;
+  const r = await execute("GOOGLECALENDAR_CREATE_EVENT", userId, {
+    summary: ev.summary,
+    description: ev.description ?? "Sincronizado pelo Manager",
+    location: ev.location ?? "",
+    start_datetime: ev.startISO,
+    event_duration_hour: durH,
+    event_duration_minutes: durM,
+  });
+  const d = r?.data ?? r;
+  return d?.id ?? d?.event_id ?? "evento criado";
+}
+
+export async function linkCalendar(userId: string, callbackUrl: string): Promise<{ redirectUrl?: string; error?: string }> {
+  const res = await fetch(`${API}/connected_accounts/link`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      auth_config_id: process.env.COMPOSIO_CALENDAR_AUTH_CONFIG,
+      user_id: userId,
+      callback_url: callbackUrl,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return { error: data?.error?.message ?? `HTTP ${res.status}` };
+  return { redirectUrl: data.redirect_url };
 }
