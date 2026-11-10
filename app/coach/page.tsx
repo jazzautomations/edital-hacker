@@ -27,6 +27,7 @@ const ACTION_LABEL: Record<string, string> = {
   list_unanswered_emails: "leu tua caixa",
   draft_email_reply: "rascunho no Gmail",
   research_target: "montou dossiê OSINT",
+  review_contract: "revisou contrato",
   check_calendar: "leu o Calendar",
   sync_gig_to_calendar: "jogou no Calendar",
 };
@@ -154,6 +155,8 @@ export default function Coach() {
 
       <VoiceSabatina mode="coach" profileEmail={profile.email} />
 
+      <ActivityFeed profileId={profile._id} />
+
       <div className="mb-4 mt-4 flex-1 overflow-y-auto rounded-2xl border border-neutral-800 p-4">
         {msgs.length === 0 && (
           <div className="flex h-full flex-col justify-center gap-4">
@@ -198,5 +201,34 @@ export default function Coach() {
         </button>
       </form>
     </main>
+  );
+}
+
+// Diário do Manager — evidência do trabalho do agente (realtime).
+function ActivityFeed({ profileId }: { profileId: string }) {
+  const items = useQuery(api.activity.list, { profileId: profileId as any }) as
+    | { _id: string; verb: string; detail?: string; result?: string; createdAt: number }[]
+    | undefined;
+  if (!items?.length) return null;
+  return (
+    <details className="mt-3 rounded-xl border border-neutral-800 p-3 text-xs">
+      <summary className="cursor-pointer font-semibold text-neutral-300">
+        ⚡ diário do Manager — o que ele já fez ({items.length})
+      </summary>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {items.slice(0, 8).map((a) => (
+          <li key={a._id} className="flex items-baseline gap-2">
+            <span className={a.result === "erro" ? "text-red-400" : a.result === "proposta" ? "text-violet-400" : "text-emerald-400"}>
+              {a.result === "erro" ? "✗" : a.result === "proposta" ? "◈" : "✓"}
+            </span>
+            <span className="text-neutral-300">{a.verb}</span>
+            <span className="truncate text-neutral-600">{a.detail}</span>
+            <span className="ml-auto shrink-0 text-neutral-700">
+              {new Date(a.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

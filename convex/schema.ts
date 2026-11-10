@@ -158,6 +158,16 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_profile", ["profileId", "status"]),
 
+  // Diário do Manager — evidência verificável de trabalho (o "trabalhou
+  // enquanto eu dormia" só convence se dá pra ver o que ele fez).
+  agentActivity: defineTable({
+    profileId: v.id("profiles"),
+    verb: v.string(), // "pesquisou dossiê", "propôs mover lead", "leu inbox"...
+    detail: v.optional(v.string()),
+    result: v.optional(v.string()), // ok | erro | proposta
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
   gigs: defineTable({
     profileId: v.id("profiles"),
     leadId: v.optional(v.id("leads")),

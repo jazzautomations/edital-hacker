@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   try {
     const { profile, lead } = (await req.json()) as {
       profile: { name: string; artAreas: string[]; bio?: string; portfolioUrl?: string };
-      lead: { name: string; kind: string; city?: string };
+      lead: { name: string; kind: string; city?: string; dossier?: string };
     };
     if (!profile?.name || !lead?.name) {
       return NextResponse.json({ error: "profile + lead required" }, { status: 400 });
@@ -30,7 +30,9 @@ export async function POST(req: Request) {
           `Artista: ${profile.name} — ${profile.artAreas.join(", ")}` +
           (profile.bio ? ` — bio: ${profile.bio}` : "") +
           (profile.portfolioUrl ? ` — portfólio: ${profile.portfolioUrl}` : "") +
-          `\nLead: ${lead.name} (${lead.kind.replaceAll("_", " ")}${lead.city ? `, ${lead.city}` : ""})\nEscreva o pitch.`,
+          `\nLead: ${lead.name} (${lead.kind.replaceAll("_", " ")}${lead.city ? `, ${lead.city}` : ""})` +
+          (lead.dossier ? `\nDOSSIÊ DO CONTRATANTE (use 1 gancho concreto no pitch — rapport):\n${lead.dossier.slice(0, 1500)}` : "") +
+          `\nEscreva o pitch.`,
       },
     ]);
     const m = text.match(/\{[\s\S]*\}/);

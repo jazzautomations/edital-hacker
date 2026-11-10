@@ -192,6 +192,15 @@ export const COACH_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: "review_contract",
+    description: "Revisa contrato de show/apresentação — cola o texto e recebe parecer com red flags (pagamento, exclusividade, cessão de imagem, ECAD, cancelamento, foro) e redação sugerida. Âncora: Portaria MTP 671/2021.",
+    parameters: {
+      type: "object",
+      properties: { text: { type: "string", description: "texto do contrato colado pelo artista" } },
+      required: ["text"],
+    },
+  },
+  {
     name: "sync_gig_to_calendar",
     description: "Empurra um gig/evento pro Google Calendar do artista (precisa estar conectado).",
     parameters: {
@@ -316,6 +325,16 @@ export async function runCoachTool(
         hint: `${profile.name} — ${profile.artAreas?.join(", ") ?? ""}`,
       });
       return `Intel do financiador pronta e salva no edital:\n${String(d).slice(0, 1200)}`;
+    }
+    case "review_contract": {
+      const { CONTRACT_REVIEW_SYSTEM } = await import("@/app/api/revisar-contrato/route");
+      const parecer = await import("@/lib/llm").then((m) =>
+        m.chat([
+          { role: "system", content: CONTRACT_REVIEW_SYSTEM },
+          { role: "user", content: String(call.arguments.text ?? "").slice(0, 20000) },
+        ])
+      );
+      return parecer;
     }
     case "check_calendar": {
       if (!calendarConfigured()) return "Calendar não configurado — falta COMPOSIO_CALENDAR_AUTH_CONFIG.";

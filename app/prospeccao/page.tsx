@@ -42,6 +42,8 @@ type Lead = {
   contact?: string;
   description?: string;
   status: string;
+  dossier?: string;
+  dossierAt?: number;
 };
 
 export default function Prospeccao() {
@@ -63,6 +65,8 @@ export default function Prospeccao() {
   const dismissAction = useMutation(api.pendingActions.dismiss);
 
   const prospect = useAction(api.discover.prospectLeads);
+  const research = useAction(api.dossier.research);
+  const [dossierBusy, setDossierBusy] = useState<Set<string>>(new Set());
   const setStatus = useMutation(api.leads.setStatus);
   const removeLead = useMutation(api.leads.remove);
   const addContact = useMutation(api.contacts.add);
@@ -249,6 +253,36 @@ export default function Prospeccao() {
                 {l.description && (
                   <p className="mt-2 text-sm text-neutral-400">{l.description}</p>
                 )}
+                {l.status !== "perdido" && (
+                  <button
+                    onClick={async () => {
+                      setDossierBusy((s) => new Set(s).add(l._id));
+                      try {
+                        await research({
+                          targetType: "lead",
+                          id: String(l._id),
+                          profileId: profile._id as any,
+                          name: l.name,
+                          city: l.city,
+                          uf: l.uf,
+                          kind: l.kind,
+                          sourceUrl: l.sourceUrl,
+                        });
+                      } finally {
+                        setDossierBusy((s) => { const n = new Set(s); n.delete(l._id); return n; });
+                      }
+                    }}
+                    className="mt-2 text-xs text-violet-400 hover:underline"
+                  >
+                    {dossierBusy.has(l._id) ? "🔍 pesquisando…" : l.dossier ? "🔍 refazer dossiê" : "🔍 dossiê OSINT"}
+                  </button>
+                )}
+                {l.dossier && (
+                  <details className="mt-2 rounded-lg border border-violet-900/50 bg-violet-950/20 p-3 text-xs">
+                    <summary className="cursor-pointer font-semibold text-violet-300">dossiê — quem agenda + rapport</summary>
+                    <p className="mt-2 whitespace-pre-wrap text-neutral-400">{l.dossier}</p>
+                  </details>
+                )}
                 {l.contact && (
                   <p className="mt-2 font-mono text-xs text-emerald-300">✉ {l.contact}</p>
                 )}
@@ -263,7 +297,7 @@ export default function Prospeccao() {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                               profile: { name: profile.name, artAreas: profile.artAreas, bio: profile.bio, portfolioUrl: profile.portfolioUrl },
-                              lead: { name: l.name, kind: l.kind, city: l.city },
+                              lead: { name: l.name, kind: l.kind, city: l.city, dossier: l.dossier },
                             }),
                           });
                           const data = await res.json();

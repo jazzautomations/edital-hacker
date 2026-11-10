@@ -33,7 +33,18 @@ export async function POST(req: Request) {
       { role: "user", content: message },
     ],
     COACH_TOOLS,
-    (call) => runCoachTool(convex, profile, profileEmail, call)
+    async (call) => {
+      const result = await runCoachTool(convex, profile, profileEmail, call);
+      await convex
+        .mutation(api.activity.log, {
+          profileId: profile._id,
+          verb: call.name.replaceAll("_", " "),
+          detail: JSON.stringify(call.arguments).slice(0, 300),
+          result: result.startsWith("Tool desconhecida") ? "erro" : "ok",
+        })
+        .catch(() => {});
+      return result;
+    }
   );
 
   const finalReply =

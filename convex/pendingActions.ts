@@ -29,7 +29,15 @@ export const propose = mutation({
       .withIndex("by_profile", (q) => q.eq("profileId", args.profileId).eq("status", "pending"))
       .collect();
     if (existing.some((p) => p.label === args.label)) return null;
-    return ctx.db.insert("pendingActions", { ...args, status: "pending", createdAt: Date.now() });
+    const id = await ctx.db.insert("pendingActions", { ...args, status: "pending", createdAt: Date.now() });
+    await ctx.db.insert("agentActivity", {
+      profileId: args.profileId,
+      verb: "propôs ação",
+      detail: args.label,
+      result: "proposta",
+      createdAt: Date.now(),
+    });
+    return id;
   },
 });
 
@@ -39,12 +47,38 @@ export const apply = mutation({
     const action = await ctx.db.get(args.id);
     if (!action || action.status !== "pending") return { ok: false };
     if (action.type === "move_lead_stage" && action.payload?.leadId && action.payload?.stage) {
+      const lead = (await ctx.db.get(action.payload.leadId as any)) as any;
+      await ctx.db.patch(args.id, { payload: { ...action.payload, prevStage: lead?.status } });
       await ctx.db.patch(action.payload.leadId as any, {
         status: action.payload.stage,
         updatedAt: Date.now(),
       });
+      await ctx.db.insert("agentActivity", {
+        profileId: action.profileId,
+        verb: "moveu lead no funil",
+        detail: action.label,
+        result: "ok",
+        createdAt: Date.now(),
+      });
     }
     await ctx.db.patch(args.id, { status: "applied" });
+    return { ok: true };
+  },
+});
+
+// Undo de 1 clique (HAX G9-C): desfaz o último apply.
+export const undo = mutation({
+  args: { id: v.id("pendingActions") },
+  handler: async (ctx, args) => {
+    const action = await ctx.db.get(args.id);
+    if (!action || action.status !== "applied" || !action.payload?.prevStage) return { ok: false };
+    if (action.type === "move_lead_stage" && action.payload?.leadId) {
+      await ctx.db.patch(action.payload.leadId as any, {
+        status: action.payload.prevStage,
+        updatedAt: Date.now(),
+      });
+    }
+    await ctx.db.patch(args.id, { status: "pending" });
     return { ok: true };
   },
 });
