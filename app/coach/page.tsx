@@ -9,14 +9,21 @@ import { useEffect, useRef, useState } from "react";
 // um mentor que sabe teus cachês, teus leads, teus prazos e tuas sabatinas
 // sem tu precisar repetir nada. O contexto inteiro vai no system prompt.
 
-type Msg = { role: "user" | "assistant"; text: string };
+type Msg = { role: "user" | "assistant"; text: string; actions?: string[] };
 
 const SUGGESTIONS = [
+  "Me acha casas de show no Rio que tocam MPB",
+  "Anota: sexta eu toco no Bar do Zé por R$ 1.500",
   "Como tá meu mês em R$?",
-  "O que eu deveria priorizar essa semana?",
-  "Me ajuda a cobrar o cachê que tá pendente",
-  "Quanto eu posso pedir de cachê num bar em SP?",
+  "Monta meu rider técnico pra mandar pro produtor",
 ];
+
+const ACTION_LABEL: Record<string, string> = {
+  prospect_leads: "caçou leads na web",
+  create_gig: "anotou na agenda",
+  update_lead_status: "moveu lead no funil",
+  prepare_document: "preparou documento",
+};
 
 export default function Coach() {
   const [email, setEmail] = useState(
@@ -70,7 +77,10 @@ export default function Coach() {
         body: JSON.stringify({ profileEmail: profile.email, message: msg }),
       });
       const data = await res.json();
-      setMsgs((m) => [...m, { role: "assistant", text: data.reply ?? data.error ?? "—" }]);
+      setMsgs((m) => [
+        ...m,
+        { role: "assistant", text: data.reply ?? data.error ?? "—", actions: data.actions },
+      ]);
     } catch {
       setMsgs((m) => [...m, { role: "assistant", text: "Caiu a conexão com o coach — tenta de novo." }]);
     } finally { setBusy(false); }
@@ -118,10 +128,15 @@ export default function Coach() {
             }`}>
               {m.role === "assistant" && <p className="mb-1 font-mono text-[9px] uppercase text-emerald-500">coach</p>}
               <p className="whitespace-pre-wrap">{m.text}</p>
+              {m.actions?.length ? (
+                <p className="mt-2 border-t border-neutral-700/60 pt-2 font-mono text-[10px] text-emerald-400">
+                  ⚙️ executou: {m.actions.map((a) => ACTION_LABEL[a] ?? a).join(" · ")}
+                </p>
+              ) : null}
             </div>
           </div>
         ))}
-        {busy && <p className="text-xs text-neutral-500">o coach tá pensando…</p>}
+        {busy && <p className="text-xs text-neutral-500">o coach tá trabalhando…</p>}
         <div ref={bottom} />
       </div>
 

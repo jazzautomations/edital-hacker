@@ -114,6 +114,62 @@ export async function chat(messages: { role: string; content: string }[]): Promi
   return json.choices?.[0]?.message?.content ?? "";
 }
 
+// ---- Agent-as-a-service: o coach EXECUTA, não só conversa ----
+
+export interface ToolDef {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+/** Loop de function calling: LLM → tools → LLM (máx 4 rodadas). */
+export async function chatWithTools(
+  messages: { role: string; content?: string | null; [k: string]: unknown }[],
+  tools: ToolDef[],
+  exec: (call: ToolCall) => Promise<string>
+): Promise<{ reply: string; actionsRun: { name: string; result: string }[] }> {
+  const { apiKey, baseUrl, model } = cfg();
+  const actionsRun: { name: string; result: string }[] = [];
+  const msgs: any[] = [...messages];
+
+  for (let round = 0; round < 4; round++) {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: msgs,
+        temperature: 0.4,
+        tools: tools.map((t) => ({ type: "function", function: t })),
+      }),
+    });
+    if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const msg = (await res.json()).choices?.[0]?.message;
+    if (!msg) break;
+
+    const calls = msg.tool_calls ?? [];
+    if (!calls.length) return { reply: msg.content ?? "", actionsRun };
+
+    msgs.push({ role: "assistant", content: msg.content ?? null, tool_calls: calls });
+    for (const c of calls) {
+      const name = c.function?.name ?? "";
+      let args: Record<string, unknown> = {};
+      try {
+        args = JSON.parse(c.function?.arguments ?? "{}");
+      } catch {}
+      const result = await exec({ name, arguments: args }).catch((e) => `ERRO: ${String(e).slice(0, 200)}`);
+      actionsRun.push({ name, result });
+      msgs.push({ role: "tool", tool_call_id: c.id, content: result });
+    }
+  }
+  return { reply: "", actionsRun };
+}
+
 /** Chamada JSON (enrich estruturado). Pede response_format json_object quando suportado. */
 export async function jsonChat<T = any>(system: string, user: string): Promise<T> {
   const { apiKey, baseUrl, model } = cfg();

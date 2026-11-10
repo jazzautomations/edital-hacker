@@ -58,6 +58,27 @@ export const setStatus = mutation({
   args: { id: v.id("leads"), status: v.string() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { status: args.status, updatedAt: Date.now() });
+    if (args.status === "fechado") {
+      const lead = await ctx.db.get(args.id);
+      if (lead) {
+        const existing = await ctx.db
+          .query("gigs")
+          .withIndex("by_profile", (q) => q.eq("profileId", lead.profileId))
+          .collect();
+        if (!existing.some((g) => g.leadId === args.id)) {
+          await ctx.db.insert("gigs", {
+            profileId: lead.profileId,
+            leadId: args.id,
+            title: lead.name,
+            venue: [lead.city, lead.uf].filter(Boolean).join("/") || undefined,
+            date: new Date().toISOString().slice(0, 10),
+            notes: "Fechado a partir do funil de prospecção",
+            status: "marcado",
+            createdAt: Date.now(),
+          });
+        }
+      }
+    }
   },
 });
 

@@ -12,6 +12,12 @@ const BLOCKED_SOURCES = [
   { name: "Rede das Artes (Funarte)", baseUrl: "https://rededasartes.cultura.gov.br" },
   { name: "Cultura Viva", baseUrl: "https://culturaviva.cultura.gov.br" },
   { name: "Mapa Cultural BH", baseUrl: "https://mapaculturalbh.pbh.gov.br" },
+  // Falham do Convex cloud (403/timeout) mas a instância existe — o agent
+  // navega pela infra deles. Confirmado no ingest de 10/nov.
+  { name: "Mapa Cultural de Pernambuco", baseUrl: "https://www.mapacultural.pe.gov.br" },
+  { name: "Mapa Cultural de MT", baseUrl: "https://mapas.mt.gov.br" },
+  { name: "Mapas de Sergipe", baseUrl: "https://mapacultural.se.gov.br" },
+  { name: "SPCultura", baseUrl: "https://spcultura.prefeitura.sp.gov.br" },
 ];
 
 export const discoverSource = internalAction({

@@ -7,18 +7,14 @@ export const MAPAS_SOURCES: { name: string; baseUrl: string; scope: "federal" | 
   { name: "Mapa Cultural do DF", baseUrl: "http://mapa.cultura.df.gov.br", scope: "estadual" },
   { name: "Mapa Cultural do ES", baseUrl: "https://mapa.cultura.es.gov.br", scope: "estadual" },
   { name: "Mapagoiano", baseUrl: "https://mapagoiano.cultura.go.gov.br", scope: "estadual" },
-  { name: "Mapa Cultural de Pernambuco", baseUrl: "https://www.mapacultural.pe.gov.br", scope: "estadual" },
   { name: "Mapa Cultural do Maranhão", baseUrl: "http://ma.mapas.cultura.gov.br", scope: "estadual" },
-  { name: "Mapa Cultural de MT", baseUrl: "https://mapas.mt.gov.br", scope: "estadual" },
-  { name: "Mapa Cultural de MS", baseUrl: "https://www.mapacultural.ms.gov.br", scope: "estadual" },
   { name: "Mapa Cultural do Pará", baseUrl: "https://mapacultural.pa.gov.br", scope: "estadual" },
-  { name: "Mapas de Sergipe", baseUrl: "https://mapacultural.se.gov.br", scope: "estadual" },
   { name: "Mapa Cultural da Paraíba", baseUrl: "https://mapacultural.pb.gov.br", scope: "estadual" },
   { name: "Mapa da Cultura do Piauí", baseUrl: "https://www.mapadacultura.pi.gov.br", scope: "estadual" },
   // municipais — long tail PNAB/Funcultura (testadas 200 OK em 08/dez;
   // removidas as que deram timeout/404: AP, TO, RS-legado, Londrina, Sobral,
-  // Iguatu, Bento Gonçalves, Blumenau, SJC, Camaçari)
-  { name: "SPCultura", baseUrl: "https://spcultura.prefeitura.sp.gov.br", scope: "municipal" },
+  // Iguatu, Bento Gonçalves, Blumenau, SJC, Camaçari; PE/MT/SE/SPCultura
+  // falham do Convex cloud → BLOCKED_SOURCES no discover)
   { name: "JP Cultura (João Pessoa)", baseUrl: "https://jpcultura.joaopessoa.pb.gov.br", scope: "municipal" },
   { name: "Mapa Cultural Natal", baseUrl: "https://mapacultural.natal.rn.gov.br", scope: "municipal" },
   { name: "Mapa Cultural Campinas", baseUrl: "https://mapacultural.campinas.sp.gov.br", scope: "municipal" },
