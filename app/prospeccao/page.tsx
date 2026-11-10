@@ -12,6 +12,8 @@ const LEAD_TYPES = [
   "marca",
   "escola",
   "produtora",
+  "agencia",
+  "prefeitura",
   "outro",
 ] as const;
 
@@ -66,6 +68,7 @@ export default function Prospeccao() {
 
   const prospect = useAction(api.discover.prospectLeads);
   const research = useAction(api.dossier.research);
+  const seedMapa = useMutation(api.leads.seedMapa);
   const [dossierBusy, setDossierBusy] = useState<Set<string>>(new Set());
   const setStatus = useMutation(api.leads.setStatus);
   const removeLead = useMutation(api.leads.remove);
@@ -212,6 +215,16 @@ export default function Prospeccao() {
             className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-40"
           >
             {running ? "Caçando…" : "Caçar leads"}
+          </button>
+          <button
+            onClick={async () => {
+              const r = await seedMapa({ profileId: profile._id as any });
+              setResult(`Mapa de agências: ${r.added} novos leads verificados (agências + feiras de showcase)`);
+            }}
+            className="rounded-xl border border-emerald-500/50 px-4 py-3 text-sm text-emerald-400"
+            title="Planta leads verificados: agências de booking BR + feiras de showcase com inscrição gratuita"
+          >
+            🗺 Mapa de agências
           </button>
           {result && <p className="font-mono text-xs text-neutral-400">{result}</p>}
         </div>

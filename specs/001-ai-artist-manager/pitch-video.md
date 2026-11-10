@@ -35,7 +35,7 @@ Ordem = força no julgamento: **execução** (desempate oficial, jurado não tes
 
 > O Brasil injetou **quinze bilhões de reais** em fomento cultural — espalhados por mais de cinco mil municípios. E o mercado de shows movimenta outros **noventa e quatro bilhões** por ano.
 >
-> Mas um terço dos artistas diz que a maior dificuldade da carreira é **encontrar um empresário** — e um booker cobra **vinte por cento do cachê**.
+> Mas um terço dos artistas diz que a maior dificuldade da carreira é **encontrar um empresário** — e um escritório fica com **metade do cachê**, num contrato de dez anos com multa milionária.
 >
 > A gente construiu o **Manager**: o coach de IA do trabalhador da arte. E ele já funciona. Olha.
 
@@ -83,7 +83,7 @@ Ordem = força no julgamento: **execução** (desempate oficial, jurado não tes
 >
 > A lógica é a que qualquer mentor de carreira ensina: **base organizada, audiência mapeada, venda no caixa, entrega orientada**. Só que em software que o artista pode pagar.
 >
-> É escala de acesso ao que hoje custa vinte por cento do cachê.
+> É escala de acesso ao que hoje custa metade do cachê — ou a empresa própria que Anitta, Ivete e Ludmilla montaram na mão quando puderam.
 
 ### Bloco 5 — 2:45–3:00 · Fecho
 
@@ -99,7 +99,7 @@ Ordem = força no julgamento: **execução** (desempate oficial, jurado não tes
 |-------|------|-------------------|
 | 0:00–0:06 | Número "R$ 15 bi" preenchendo a tela (emerald-400 sobre neutral-900, tipografia do app) | Motion simples; a estética do app É a linguagem (Kiss é videomaker — capricho é nota) |
 | 0:06–0:12 | "5.570 municípios" → mapa do Brasil polvilhado de pontos | Pontos = instâncias Mapas reais |
-| 0:12–0:18 | "32% sem empresário" / "20% do cachê" → corte seco pro app | Transição direta pra tela real — sem logo animado longo |
+| 0:12–0:18 | "32% sem empresário" / "50% do cachê" → corte seco pro app | Transição direta pra tela real — sem logo animado longo |
 | 0:18–0:28 | `/pipeline` ou feed com perfil da **Lia Moura** logado | Email fake visível tipo `lia@demo.dev`; badge MEI |
 | 0:28–0:42 | `/oportunidades`: contador "**110 oportunidades · N fontes**" no topo; scroll rápido; zoom no card com "aceita você ✓", "até R$ X", "máx 1 proposta/proponente", badge de prazo | ⚠️ atualizar o número falado pro count real do dia; dar zoom/recortar no card — jurado lê badge |
 | 0:42–0:52 | `/sabatina/[id]`: primeira pergunta do parecerista chegando (digitação real ou corte de 1s) | Escolher um edital ENRICHED com rubrica explícita no banco |
@@ -113,7 +113,7 @@ Ordem = força no julgamento: **execução** (desempate oficial, jurado não tes
 | 2:02–2:10 | Flash de código real: `convex/crons` (4 rotinas), `lib/mapas.ts` (toNum/toStrArray), `convex/discover.ts` (Firecrawl `/agent`) | Máx 3 flashes de 2s — legível, não tour de código |
 | 2:10–2:16 | Voz: clipe da sabatina falada OU (se UI de voz não estiver mergeada até a gravação) POST `/api/voice-session` subindo agente Agora + resposta SSE do `/api/voice-llm` | ⚠️ voz hoje é API-level (`app/api/voice-*`); se não houver tela, mostrar terminal+console Agora — ainda é prova |
 | 2:16–2:22 | `webhookLog` no dashboard Convex: evento idempotente, plano ativado | Prova de engenharia de billing, não só a tela bonita |
-| 2:22–2:32 | `/assinatura`: Manager R$49/mês · R$490/ano · Pro R$99 · avulso R$9,90 — ao lado, "booker = 15–20% do cachê" | Split-screen de preço vs. âncora |
+| 2:22–2:32 | `/assinatura`: Manager R$49/mês · R$490/ano · Pro R$99 · avulso R$9,90 — ao lado, "escritório = ~50% do cachê por 10 anos" | Split-screen de preço vs. âncora (dado verificado em research-agencias.md) |
 | 2:32–2:45 | Grid dos 4 pilares do coach (radar+sabatina / prospecção / agenda & cachês / docs organizados) com os rótulos Base→Audiência→Venda→entrega Orientada embaixo | Nod pro vocabulário B.R.A.V.O. sem citar nome próprio |
 | 2:45–3:00 | End card: `manager_` wordmark, URL pública, `github.com/jazzautomations/edital-hacker`, trilha | Segurar 3s estático — jurado pausa pra copiar link |
 

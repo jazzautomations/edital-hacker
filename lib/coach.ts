@@ -12,6 +12,7 @@ import {
   listCalendarEvents,
 } from "@/lib/composio";
 import { ruleFor } from "@/lib/docRules";
+import { AGENCY_INTEL } from "@/lib/agencySeed";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -101,6 +102,8 @@ export function contextBlock(c: any): string {
   if (sab.length) {
     lines.push(`SABATINAS FEITAS: ${sab.map((s: any) => `${s.score}/100`).join(", ")}`);
   }
+  lines.push("", "MERCADO (intel verificada — use pra aconselhar sobre agências/empresários):");
+  for (const i of AGENCY_INTEL) lines.push(`  · ${i}`);
   return lines.filter((l) => l !== null).join("\n");
 }
 

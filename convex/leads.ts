@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
+import { AGENCY_SEED } from "../lib/agencySeed";
 
 export const listForProfile = query({
   args: { profileId: v.id("profiles") },
@@ -79,6 +80,40 @@ export const setStatus = mutation({
         }
       }
     }
+  },
+});
+
+// Planta o mapa verificado de agências + showcases no funil do perfil.
+// Dedupe por nome; devolve quantos entraram de fato.
+export const seedMapa = mutation({
+  args: { profileId: v.id("profiles") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("leads")
+      .withIndex("by_profile", (q) => q.eq("profileId", args.profileId))
+      .collect();
+    const names = new Set(existing.map((l) => l.name.toLowerCase()));
+    let added = 0;
+    for (const s of AGENCY_SEED) {
+      if (names.has(s.name.toLowerCase())) continue;
+      await ctx.db.insert("leads", {
+        profileId: args.profileId,
+        name: s.name,
+        kind: s.kind,
+        city: s.city,
+        uf: s.uf,
+        sourceUrl: s.sourceUrl,
+        contact: s.contact,
+        description: `${s.fit}. ${s.notes}`,
+        notes: `seed:mapa-agências · quem abordar: ${s.fit}`,
+        status: "novo",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      names.add(s.name.toLowerCase());
+      added++;
+    }
+    return { added, total: AGENCY_SEED.length };
   },
 });
 
