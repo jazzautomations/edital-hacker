@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 
 export const getByEmail = query({
   args: { email: v.string() },
@@ -12,6 +12,11 @@ export const getByEmail = query({
 
 export const list = query({
   handler: async (ctx) => await ctx.db.query("profiles").collect(),
+});
+
+export const getById = internalQuery({
+  args: { id: v.id("profiles") },
+  handler: async (ctx, { id }) => await ctx.db.get(id),
 });
 
 export const upsert = mutation({

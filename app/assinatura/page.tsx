@@ -37,6 +37,33 @@ function Inner() {
     | Profile | null | undefined;
   const subscribe = useAction(api.billing.subscribe);
   const unlock = useAction(api.billing.unlockEdital);
+  const pixQr = useAction(api.billing.pixUnlock);
+  const [pix, setPix] = useState<{
+    brCode: string;
+    brCodeBase64: string;
+    amount: number;
+  } | null>(null);
+
+  async function goPixInline() {
+    if (!profile || !unlockOpp) {
+      setError("Entre com seu email primeiro (ou crie o perfil em /pipeline).");
+      return;
+    }
+    setBusy("pix");
+    setError(null);
+    try {
+      setPix(
+        await pixQr({
+          profileId: profile._id as any,
+          opportunityId: unlockOpp as any,
+        })
+      );
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function go(kind: "sub" | "unlock", plan?: string, cyc?: string) {
     if (!profile) {
@@ -112,13 +139,48 @@ function Inner() {
           <p className="mt-1 text-sm text-neutral-400">
             Sabatina completa deste edital por um Pix único — sem assinatura.
           </p>
-          <button
-            onClick={() => go("unlock")}
-            disabled={busy !== null}
-            className="mt-4 rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-50"
-          >
-            {busy === "unlock" ? "Abrindo Pix…" : "Pagar R$ 9,90 via Pix"}
-          </button>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={goPixInline}
+              disabled={busy !== null}
+              className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-50"
+            >
+              {busy === "pix" ? "Gerando QR…" : "Pix R$ 9,90 — QR na tela"}
+            </button>
+            <button
+              onClick={() => go("unlock")}
+              disabled={busy !== null}
+              className="rounded-xl border border-neutral-700 px-6 py-3 text-sm disabled:opacity-50"
+            >
+              {busy === "unlock" ? "Abrindo Pix…" : "Abrir checkout"}
+            </button>
+          </div>
+
+          {pix && (
+            <div className="mt-5 flex flex-col items-center gap-3 rounded-xl bg-neutral-900 p-5">
+              <img
+                src={
+                  pix.brCodeBase64.startsWith("data:")
+                    ? pix.brCodeBase64
+                    : `data:image/png;base64,${pix.brCodeBase64}`
+                }
+                alt="QR Code Pix"
+                className="h-48 w-48 rounded-lg bg-white p-2"
+              />
+              <p className="text-sm font-semibold">
+                R$ {(pix.amount / 100).toFixed(2).replace(".", ",")} — escaneia com o banco
+              </p>
+              <button
+                onClick={() => navigator.clipboard.writeText(pix.brCode)}
+                className="rounded-lg bg-neutral-800 px-4 py-2 text-xs text-sky-300"
+              >
+                Copiar código Pix (copia-e-cola)
+              </button>
+              <p className="text-[11px] text-neutral-500">
+                Caiu o Pix? O webhook destrava o edital sozinho — pode voltar pro pipeline.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

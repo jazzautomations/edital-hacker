@@ -3,6 +3,7 @@ import { action, internalMutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   createOneOffCheckout,
+  createPixQr,
   createSubscriptionCheckout,
 } from "../lib/abacatepay";
 
@@ -75,6 +76,32 @@ export const unlockEdital = action({
       returnUrl: args.returnUrl,
       completionUrl: args.completionUrl,
     });
+  },
+});
+
+// PIX inline: QR na tela do paywall — sem redirect (cena do vídeo).
+// Preço do unlock vem de env (ABACATE_UNLOCK_PRICE_CENTS, default 990 = R$9,90).
+export const pixUnlock = action({
+  args: { profileId: v.id("profiles"), opportunityId: v.id("opportunities") },
+  handler: async (ctx, args) => {
+    const profile = await ctx.runQuery(internal.profiles.getById, {
+      id: args.profileId,
+    });
+    if (!profile) throw new Error("Perfil não encontrado");
+    const amount = Number(process.env.ABACATE_UNLOCK_PRICE_CENTS ?? 990);
+    const qr = await createPixQr({
+      amount,
+      description: "Manager — destrava edital",
+      expiresIn: 3600,
+      customer: { email: (profile as any).email, name: (profile as any).name },
+    });
+    return {
+      pixId: qr.id,
+      brCode: qr.brCode,
+      brCodeBase64: qr.brCodeBase64,
+      amount,
+      externalId: `unlock:${args.profileId}:${args.opportunityId}`,
+    };
   },
 });
 

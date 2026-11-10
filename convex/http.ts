@@ -78,6 +78,41 @@ http.route({
   }),
 });
 
+// Webhook Resend inbound — email.received: resposta do contratante cai aqui
+// quando os envios do Manager saem com reply_to no domínio de recebimento.
+// URL: https://<deployment>.convex.site/webhooks/resend?webhookSecret=...
+http.route({
+  path: "/webhooks/resend",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const provided =
+      url.searchParams.get("webhookSecret") ??
+      req.headers.get("x-webhook-secret");
+    const expected = process.env.RESEND_WEBHOOK_SECRET;
+    if (!expected || provided !== expected) {
+      return new Response(JSON.stringify({ ok: false }), { status: 401 });
+    }
+    const body = await req.json().catch(() => ({}));
+    if (body?.type !== "email.received") {
+      return new Response(JSON.stringify({ ok: true, ignored: body?.type }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const d = body?.data ?? {};
+    const result = await ctx.runMutation(internal.inbound.handleInbound, {
+      from: String(d.from ?? ""),
+      subject: String(d.subject ?? "(sem assunto)"),
+      snippet: String(d.text ?? d.html ?? "").replace(/<[^>]+>/g, " ").slice(0, 500),
+    });
+    return new Response(JSON.stringify({ ok: true, ...result }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }),
+});
+
 // Webhook Nvoip — status de entrega de SMS/WhatsApp (opcional, telemetria).
 http.route({
   path: "/webhooks/nvoip",

@@ -63,6 +63,30 @@ export async function createOneOffCheckout(args: {
   });
 }
 
+export interface PixQrResult {
+  id: string;
+  brCode: string; // copia-e-cola
+  brCodeBase64: string; // QR inline (data URI ou base64 puro)
+  status: string;
+  expiresIn?: number;
+}
+
+/** PIX direto: QR inline no paywall — o jurado escaneia na tela, sem redirect. */
+export async function createPixQr(args: {
+  amount: number; // centavos
+  description: string; // <= 37 chars
+  expiresIn?: number;
+  customer?: { name?: string; email?: string; taxId?: string };
+}): Promise<PixQrResult> {
+  return await post("/pixQrCode/create", {
+    amount: args.amount,
+    description: args.description.slice(0, 37),
+    ...(args.expiresIn ? { expiresIn: args.expiresIn } : {}),
+    ...(args.customer ? { customer: args.customer } : {}),
+    devMode: devMode(),
+  });
+}
+
 /** Verificação do segredo do webhook (configurado no painel Abacate). */
 export function verifyWebhookSecret(provided: string | null): boolean {
   const expected = process.env.ABACATEPAY_WEBHOOK_SECRET;

@@ -47,8 +47,25 @@ entrega pro email do dono da conta — pro demo, manda alerta pro teu próprio e
 
 ```bash
 RESEND_API_KEY=     # re_...
-RESEND_FROM="Manager <onboarding@resend.dev>"   # ou teu domínio verificado
+RESEND_FROM="Manager <manager@<seu-inbox>.resend.app>"   # ver nota inbound abaixo
 ```
+
+**Inbound (reply-detect sem depender do Gmail — RECOMENDADO)**: no painel
+Resend → Receiving → cria um domínio de recebimento (`.resend.app` funciona sem
+domínio próprio) → registra o webhook:
+
+```
+URL: https://keen-kangaroo-265.convex.site/webhooks/resend?webhookSecret=<RESEND_WEBHOOK_SECRET>
+evento: email.received
+```
+
+```bash
+RESEND_WEBHOOK_SECRET=   # openssl rand -hex 32 — o mesmo que vai na URL acima 🔁
+RESEND_REPLY_TO=         # o endereço do inbound, ex: manager@xxx.resend.app 🔁
+```
+
+Com isso, email que o Manager envia sai com `reply_to` nosso → a resposta do
+contratante cai no webhook → propõe move no funil sozinho (Composio vira extra).
 
 ## 5. Evolution — WhatsApp (tu JÁ TEM rodando no imac)
 
@@ -112,7 +129,9 @@ Dashboard → API key sandbox + cria os produtos e copia os IDs. 🔁 = Convex t
 ```bash
 ABACATEPAY_API_KEY=            # .env.local (rota /api checkout)
 ABACATEPAY_SANDBOX=true
-ABACATEPAY_WEBHOOK_SECRET=     # 🔁 Convex (billing.ts)
+ABACATEPAY_WEBHOOK_SECRET=     # 🔁 Convex (billing.ts) — webhook no painel:
+                             # https://keen-kangaroo-265.convex.site/webhooks/abacatepay?webhookSecret=<valor>
+ABACATE_UNLOCK_PRICE_CENTS=990 # 🔁 QR Pix inline do "destrava edital"
 ABACATE_PRODUCT_UNLOCK=        # sabatina avulsa R$9,90        🔁
 ABACATE_PRODUCT_MANAGER_MONTHLY=   # 🔁
 ABACATE_PRODUCT_MANAGER_ANNUAL=    # 🔁

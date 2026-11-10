@@ -11,13 +11,25 @@ export interface EmailItem {
   html: string;
 }
 
-export async function sendEmail(to: string, subject: string, html: string) {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  replyTo?: string
+) {
   const k = key();
   if (!k) return { skipped: true };
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM(), to, subject, html }),
+    body: JSON.stringify({
+      from: FROM(),
+      to,
+      subject,
+      html,
+      // reply_to no domínio inbound → a resposta cai em /webhooks/resend.
+      reply_to: replyTo ?? process.env.RESEND_REPLY_TO ?? undefined,
+    }),
   });
   return { ok: res.ok, status: res.status };
 }
