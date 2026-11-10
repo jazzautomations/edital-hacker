@@ -16,16 +16,20 @@ interface VoiceSession {
   agentId: string;
 }
 
-// Sabatina por voz via Agora RTC + Conversational AI (D012):
-// POST /api/voice-session sobe o agente (ASR+LLM+TTS managed) num canal RTC;
-// entramos no mesmo canal publicando o mic e tocando o áudio remoto do agente.
+// Voz via Agora RTC + Conversational AI: POST /api/voice-session sobe o
+// agente (ASR+LLM+TTS managed) num canal RTC; entramos no mesmo canal
+// publicando o mic e tocando o áudio remoto. Dois modos:
+//   sabatina — banca simulada com rubrica do edital + submit_verdict
+//   coach    — o Manager vivo com memória da carreira + tools de execução
 // O SDK entra por import() dinâmico no clique — fora do grafo de SSR/pré-render.
 export default function VoiceSabatina({
   opportunityId,
   profileEmail,
+  mode = "sabatina",
 }: {
-  opportunityId: string;
+  opportunityId?: string;
   profileEmail: string;
+  mode?: "sabatina" | "coach";
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -64,7 +68,7 @@ export default function VoiceSabatina({
       const res = await fetch("/api/voice-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opportunityId, profileEmail }),
+        body: JSON.stringify({ opportunityId, profileEmail, mode }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -136,7 +140,7 @@ export default function VoiceSabatina({
         {status === "live" && (
           <span className="flex items-center gap-2 font-mono text-xs text-emerald-300">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-            {agentOn ? "BANCA NO AR" : "CHAMANDO A BANCA…"}
+            {agentOn ? (mode === "coach" ? "COACH NO AR" : "BANCA NO AR") : "CONECTANDO…"}
           </span>
         )}
       </div>
@@ -146,14 +150,16 @@ export default function VoiceSabatina({
           <p className="mt-2 text-sm text-neutral-400">
             {status === "ended"
               ? "Sessão de voz encerrada — a de texto continua aqui embaixo."
-              : "Prefere falar? A banca te sabatina por áudio — mesmo prompt, mesmo veredito."}
+              : mode === "coach"
+                ? "Fala com teu coach por voz — ele lembra da tua carreira e executa o que tu mandar."
+                : "Prefere falar? A banca te sabatina por áudio — mesmo prompt, mesmo veredito."}
           </p>
           <button
             onClick={connect}
             disabled={!profileEmail}
             className="mt-3 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-emerald-400 disabled:opacity-40"
           >
-            🎙 Sabatina por voz
+            {mode === "coach" ? "🎙 Falar com o coach" : "🎙 Sabatina por voz"}
           </button>
           {!profileEmail && (
             <p className="mt-1 text-xs text-neutral-500">
@@ -165,14 +171,14 @@ export default function VoiceSabatina({
 
       {status === "connecting" && (
         <p className="mt-2 text-sm text-neutral-400">
-          Chamando a banca… libera o microfone quando o browser pedir.
+          {mode === "coach" ? "Chamando o coach" : "Chamando a banca"}… libera o microfone quando o browser pedir.
         </p>
       )}
 
       {status === "live" && (
         <>
           <p className="mt-2 text-sm text-neutral-300">
-            Mic aberto — responde aí que a banca tá ouvindo.
+            {mode === "coach" ? "Mic aberto — manda que o coach executa." : "Mic aberto — responde aí que a banca tá ouvindo."}
           </p>
           <button
             onClick={disconnect}

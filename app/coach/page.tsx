@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import VoiceSabatina from "@/components/VoiceSabatina";
 
 // O Coach — chat com memória total da carreira. É a promessa central:
 // um mentor que sabe teus cachês, teus leads, teus prazos e tuas sabatinas
@@ -105,7 +106,9 @@ export default function Coach() {
         </div>
       </header>
 
-      <div className="mb-4 flex-1 overflow-y-auto rounded-2xl border border-neutral-800 p-4">
+      <VoiceSabatina mode="coach" profileEmail={profile.email} />
+
+      <div className="mb-4 mt-4 flex-1 overflow-y-auto rounded-2xl border border-neutral-800 p-4">
         {msgs.length === 0 && (
           <div className="flex h-full flex-col justify-center gap-4">
             <p className="text-center text-sm text-neutral-400">
