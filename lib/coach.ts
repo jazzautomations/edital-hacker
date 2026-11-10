@@ -11,6 +11,7 @@ import {
   gmailStatus,
   listCalendarEvents,
 } from "@/lib/composio";
+import { ruleFor } from "@/lib/docRules";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -82,7 +83,15 @@ export function contextBlock(c: any): string {
   }
   const docs = (c.docs ?? []).filter((d: any) => d.expiresAt);
   if (docs.length) {
-    lines.push(`DOCS C/ VENCIMENTO: ${docs.map((d: any) => `${d.name} (${d.expiresAt.slice(0, 10)})`).join(" · ")}`);
+    lines.push(
+      `DOCS C/ VENCIMENTO: ${docs
+        .map((d: any) => {
+          const r = ruleFor(`${d.name} ${d.kind ?? ""}`);
+          return `${d.name} (${d.expiresAt.slice(0, 10)})${r ? ` [regra: ${r.hint}]` : ""}`;
+        })
+        .join(" · ")}`
+    );
+    lines.push(`REGRA DE OURO: CRF-FGTS vale só 30 dias — manda o artista emitir na semana da entrega do edital, nunca antes junto com as federais (180d).`);
   }
   const riders = c.riders ?? [];
   if (riders.length) {

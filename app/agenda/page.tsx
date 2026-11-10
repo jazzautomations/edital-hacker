@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Profile } from "@/lib/types";
 import { calcCachet } from "@/lib/cachet";
+import { ruleFor } from "@/lib/docRules";
 
 const NEXT: Record<string, string> = { marcado: "feito", feito: "pago" };
 const STYLE: Record<string, string> = {
@@ -129,9 +130,18 @@ export default function Agenda() {
             {overdue.map((g) => (
               <li key={g._id} className="text-amber-400">💸 {g.title} foi dia {g.date} e R$ {g.fee?.toLocaleString("pt-BR")} ainda não tá como pago — cobra.</li>
             ))}
-            {(expiring ?? []).map((d) => (
-              <li key={d._id} className="text-red-400">📄 {d.name} vence {d.expiresAt?.slice(0, 10)} — renova antes do próximo edital.</li>
-            ))}
+            {(expiring ?? []).map((d) => {
+              const rule = ruleFor(`${d.name} ${(d as any).kind ?? ""}`);
+              return (
+                <li key={d._id} className="text-red-400">
+                  📄 {d.name} vence {d.expiresAt?.slice(0, 10)}
+                  {rule && <span className="text-neutral-400"> — {rule.hint}</span>}
+                  {rule?.emitUrl && (
+                    <> <a href={rule.emitUrl} target="_blank" rel="noreferrer" className="text-emerald-400 underline">emitir →</a></>
+                  )}
+                </li>
+              );
+            })}
             {staleLeads.slice(0, 3).map((l) => (
               <li key={l._id}>📞 {l.name} ({l.status}) parado há {Math.floor((Date.now() - l.updatedAt) / 86400000)}d — follow-up.</li>
             ))}
