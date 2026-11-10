@@ -155,6 +155,8 @@ export default function Coach() {
 
       <VoiceSabatina mode="coach" profileEmail={profile.email} />
 
+      <Briefing profileId={profile._id} ctx={ctx} />
+
       <ActivityFeed profileId={profile._id} />
 
       <div className="mb-4 mt-4 flex-1 overflow-y-auto rounded-2xl border border-neutral-800 p-4">
@@ -201,6 +203,58 @@ export default function Coach() {
         </button>
       </form>
     </main>
+  );
+}
+
+// Briefing "enquanto você dormia" — deriva urgências do contexto + fila de
+// propostas do reply-detect. Aparece só quando tem algo a dizer.
+function Briefing({ profileId, ctx }: { profileId: string; ctx: any }) {
+  const pending = useQuery(
+    api.pendingActions.listPending,
+    profileId ? { profileId: profileId as any } : "skip"
+  ) as { _id: string; label: string }[] | undefined;
+  if (!ctx) return null;
+
+  const now = Date.now();
+  const inDays = (iso?: string) =>
+    iso ? Math.ceil((new Date(iso).getTime() - now) / 86400000) : null;
+  const items: { icon: string; text: string; href?: string; tone: string }[] = [];
+
+  for (const p of pending ?? [])
+    items.push({ icon: "📬", text: `proposta: ${p.label}`, href: "/prospeccao", tone: "text-violet-300" });
+
+  for (const i of ctx.pipeline ?? []) {
+    const d = inDays(i.opportunity?.registrationTo);
+    if (d !== null && d >= 0 && d <= 7 && i.stage !== "inscrito" && i.stage !== "resultado")
+      items.push({ icon: "⏰", text: `${i.opportunity?.name} fecha em ${d}d`, href: "/pipeline", tone: "text-amber-300" });
+  }
+
+  for (const d of ctx.docs ?? []) {
+    const dd = inDays(d.expiresAt);
+    if (dd !== null && dd <= 30)
+      items.push({ icon: "📄", text: dd < 0 ? `${d.name} VENCEU` : `${d.name} vence em ${dd}d`, href: "/agenda", tone: dd < 0 ? "text-red-400" : "text-amber-300" });
+  }
+
+  for (const g of ctx.gigs ?? []) {
+    const d = inDays(g.date);
+    if (d !== null && d >= 0 && d <= 7)
+      items.push({ icon: "🎤", text: `${g.title} — ${g.date.slice(5)}${g.fee ? ` · R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`, href: "/agenda", tone: "text-sky-300" });
+    if (g.status === "feito" && d !== null && d < 0)
+      items.push({ icon: "💸", text: `${g.title} rolou e R$ ${g.fee?.toLocaleString("pt-BR") ?? "—"} não consta pago — cobra`, href: "/agenda", tone: "text-red-300" });
+  }
+
+  if (!items.length) return null;
+  return (
+    <div className="mt-3 rounded-xl border border-neutral-800 p-3 text-xs">
+      <p className="mb-2 font-semibold text-neutral-300">☀️ enquanto você dormia ({items.length})</p>
+      <ul className="flex flex-col gap-1.5">
+        {items.slice(0, 8).map((it, i) => (
+          <li key={i} className={it.tone}>
+            {it.icon} {it.href ? <Link href={it.href} className="hover:underline">{it.text}</Link> : it.text}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
