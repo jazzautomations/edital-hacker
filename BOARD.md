@@ -80,10 +80,11 @@ Ordem: **rascunho no painel (destrava keys grátis)** → keys+convex env → E2
 - Depende de: E2E verde
 - Pronto quando: login real substitui perfil "demo"; perfis por usuário autenticado
 
-### [T045] Deploy público (Vercel + Convex prod)
-- Dono: Devin
-- Depende de: E2E + T044
-- Pronto quando: link estável, demo carrega sem login, env vars em produção
+### ~~[T045] Deploy público (Vercel + Convex prod)~~ ✅ FEITO
+- Live: https://editalhacker.jazzautomations.com.br (Vercel prod, 37 envs)
+- Convex prod `greedy-curlew-394` deployado + 24 envs + ingest (100+ opps)
+- Webhook AbacatePay prod `manager-convex-prod` (v2, 6 eventos) → prod site
+- WorkOS redirect URIs: domínio prod (Default) + localhost
 
 ### [T046] Dados de demo sintéticos + seed
 - Dono: Devin
