@@ -11,12 +11,12 @@ Ordem = o que destrava mais rápido. Marque `[x]` conforme for.
 - [x] `GROQ_API_KEY` — oneiro/.env.local (LLM backup)
 - [x] `VOICE_LLM_API_KEY` — mesma Gemini
 - [x] `NOTIFY_SECRET` + `APP_URL` — gerados localmente
-- [ ] `FIRECRAWL_API_KEY` — NÃO achada em lugar nenhum → firecrawl.dev (5k créditos grátis via rascunho no painel!)
-- [ ] `RESEND_*` — não achada → resend.com (free, e inbound é o que destrava reply-detect)
-- [ ] `WORKOS_*` — dashboard.workos.com (opcional — sem ela o app roda em modo demo)
-- [ ] `ABACATEPAY_*` — painel AbacatePay (sandbox) — o QR Pix na tela depende disso
+- [x] `FIRECRAWL_API_KEY` — criada via cadastro Google no Brave (testada com scrape real) — .env.local + Convex ✅
+- [x] `RESEND_*` — conta jazzautomations@ (login via reset), key `manager-editalhacker`, domínios verificados mastersinger.com.br + fodacerta.com.br, webhook `email.received` criado por API, secret no Convex ✅
+- [x] `WORKOS_*` — projeto "Manager" criado, CLIENT_ID + API_KEY + COOKIE_PASSWORD + redirects (localhost + domínio prod) ✅
+- [x] `ABACATEPAY_*` — sandbox Manager, key API v2 (2FA TOTP próprio), webhook v2 6 eventos (dev+prod), 5 produtos criados, billing E2E testado (Pix simulado → PAID) ✅
 - [ ] `NVOIP_*` — opcional (demo usa Evolution)
-- [ ] `EVOLUTION_*` — `ssh jazz@100.69.84.45` docker inspect (comando na seção 5)
+- [x] `EVOLUTION_*` — ✅ instaladas. Tunnel `ssh -L 18080:localhost:8080 jazz@100.69.84.45` (instância `jazz` OPEN 5511***040 — msg de teste entregue). Prod precisa endpoint público (VPS/tunnel no imac).
 - [ ] `NEURALAKE_*` — achada (nlk-... api.neuralake.cloud) mas endpoint /v1/models 404 — revisitar se virar fonte de LLM
 
 **Regra dos DOIS lugares**: `.env.local` alimenta as rotas Next; as actions do
