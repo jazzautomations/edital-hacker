@@ -32,7 +32,7 @@ export default function Oportunidades() {
     limit: 100,
   }) as Opportunity[] | undefined;
   const bySource = useQuery(api.opportunities.countBySource) as
-    | Record<string, number>
+    | { source: string; count: number }[]
     | undefined;
 
   function eligibilityOf(o: Opportunity): "ok" | "warn" | null {
@@ -50,8 +50,8 @@ export default function Oportunidades() {
           <h1 className="text-3xl font-bold">Oportunidades abertas</h1>
           {bySource && (
             <p className="mt-1 text-sm text-neutral-400">
-              {Object.values(bySource).reduce((a, b) => a + b, 0)} oportunidades ·{" "}
-              {Object.keys(bySource).length} fontes
+              {bySource.reduce((a, b) => a + b.count, 0)} oportunidades ·{" "}
+              {bySource.length} fontes
             </p>
           )}
         </div>

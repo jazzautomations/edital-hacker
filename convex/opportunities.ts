@@ -48,7 +48,8 @@ export const countBySource = query({
     const items = await ctx.db.query("opportunities").collect();
     const bySource: Record<string, number> = {};
     for (const o of items) bySource[o.sourceName] = (bySource[o.sourceName] ?? 0) + 1;
-    return bySource;
+    // array — nomes de fonte com acento não podem virar chave de objeto (Convex exige ASCII)
+    return Object.entries(bySource).map(([source, count]) => ({ source, count }));
   },
 });
 

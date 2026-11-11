@@ -19,6 +19,8 @@ const CONTRACT_QUERIES = [
 export const scanPncp = internalAction({
   handler: async (ctx) => {
     const results: Record<string, unknown> = {};
+    const safeKey = (s: string) =>
+      s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^ -~]/g, "_").slice(0, 30);
 
     // (a) Editais/credenciamentos recebendo proposta
     let oppUpserted = 0;
@@ -49,7 +51,7 @@ export const scanPncp = internalAction({
           oppUpserted++;
         }
       } catch (e) {
-        results[`open_err_${q.slice(0, 15)}`] = String(e);
+        results[`open_err_${safeKey(q)}`] = String(e);
       }
     }
 
@@ -83,7 +85,7 @@ export const scanPncp = internalAction({
           benchUpserted++;
         }
       } catch (e) {
-        results[`bench_err_${q.slice(0, 15)}`] = String(e);
+        results[`bench_err_${safeKey(q)}`] = String(e);
       }
     }
 
