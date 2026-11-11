@@ -1,4 +1,4 @@
-const BASE = "https://api.abacatepay.com/v1";
+const BASE = "https://api.abacatepay.com/v2";
 
 function key(): string {
   const k = process.env.ABACATEPAY_API_KEY;
@@ -35,15 +35,25 @@ export async function createSubscriptionCheckout(args: {
   completionUrl: string;
   methods?: ("PIX" | "CARD")[];
 }): Promise<CheckoutResult> {
-  return await post("/subscriptions/create", {
+  const body = (methods: ("PIX" | "CARD")[]) => ({
     items: [{ id: args.productId, quantity: 1 }],
     externalId: args.externalId,
     returnUrl: args.returnUrl,
     completionUrl: args.completionUrl,
-    methods: args.methods ?? ["PIX", "CARD"],
+    methods,
     retryPolicy: { maxRetry: 5, retryEvery: 3 },
     devMode: devMode(),
   });
+  const wanted = args.methods ?? ["PIX", "CARD"];
+  try {
+    return await post("/subscriptions/create", body(wanted));
+  } catch (e) {
+    // PIX recorrente exige "PIX Automático" habilitado na loja — cai pra cartão
+    if (wanted.includes("PIX") && /PIX Autom/i.test(String(e))) {
+      return await post("/subscriptions/create", body(["CARD"]));
+    }
+    throw e;
+  }
 }
 
 /** Checkout avulso (destrava 1 edital) → url p/ redirecionar. */
@@ -76,14 +86,18 @@ export async function createPixQr(args: {
   amount: number; // centavos
   description: string; // <= 37 chars
   expiresIn?: number;
-  customer?: { name?: string; email?: string; taxId?: string };
+  customer?: { name?: string; email?: string; taxId?: string; cellphone?: string };
 }): Promise<PixQrResult> {
-  return await post("/pixQrCode/create", {
-    amount: args.amount,
-    description: args.description.slice(0, 37),
-    ...(args.expiresIn ? { expiresIn: args.expiresIn } : {}),
-    ...(args.customer ? { customer: args.customer } : {}),
-    devMode: devMode(),
+  return await post("/transparents/create", {
+    method: "PIX",
+    data: {
+      name: args.customer?.name ?? "Cliente Manager",
+      email: args.customer?.email ?? "cliente@manager.app",
+      taxId: args.customer?.taxId ?? "46281000803",
+      cellphone: args.customer?.cellphone ?? "11900000000",
+      amount: args.amount,
+      description: args.description.slice(0, 37),
+    },
   });
 }
 
