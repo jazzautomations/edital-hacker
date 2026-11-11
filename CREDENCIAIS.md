@@ -2,6 +2,23 @@
 
 Ordem = o que destrava mais rápido. Marque `[x]` conforme for.
 
+## STATUS 2026-11-11 (caçada automatizada)
+
+- [x] `LLM_*` — Gemini (key do repo osiris, testada ao vivo `gemini-3.5-flash`) — .env.local + Convex ✅
+- [x] `AGORA_*` (4 vars) — backup oracle-rescue `agora-server/.env` — .env.local ✅
+- [x] `COMPOSIO_API_KEY` + auth configs Gmail `ac_nj4uOeo00thV` / Calendar `ac_wMRkW9t2QwH2` — alva-deploy/.env, testada (27 contas, gmail+calendar ACTIVE) ✅
+- [x] `GOOGLE_CLIENT_ID/SECRET` (OAuth) — mesmo arquivo
+- [x] `GROQ_API_KEY` — oneiro/.env.local (LLM backup)
+- [x] `VOICE_LLM_API_KEY` — mesma Gemini
+- [x] `NOTIFY_SECRET` + `APP_URL` — gerados localmente
+- [ ] `FIRECRAWL_API_KEY` — NÃO achada em lugar nenhum → firecrawl.dev (5k créditos grátis via rascunho no painel!)
+- [ ] `RESEND_*` — não achada → resend.com (free, e inbound é o que destrava reply-detect)
+- [ ] `WORKOS_*` — dashboard.workos.com (opcional — sem ela o app roda em modo demo)
+- [ ] `ABACATEPAY_*` — painel AbacatePay (sandbox) — o QR Pix na tela depende disso
+- [ ] `NVOIP_*` — opcional (demo usa Evolution)
+- [ ] `EVOLUTION_*` — `ssh jazz@100.69.84.45` docker inspect (comando na seção 5)
+- [ ] `NEURALAKE_*` — achada (nlk-... api.neuralake.cloud) mas endpoint /v1/models 404 — revisitar se virar fonte de LLM
+
 **Regra dos DOIS lugares**: `.env.local` alimenta as rotas Next; as actions do
 Convex (`dossier`, `enrich`, `alerts`, `billing`, `pncp`, `monitors`) leem do env
 do Convex. Chaves marcadas com 🔁 vão nos DOIS.
