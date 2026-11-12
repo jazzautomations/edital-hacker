@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import VoiceSabatina from "@/components/VoiceSabatina";
 import { useAuthEmail } from "@/lib/useAuth";
+import { SignIn } from "@/components/SignIn";
 import { RichText } from "@/lib/format";
 
 // O Coach — chat com memória total da carreira. É a promessa central:
@@ -35,7 +36,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 export default function Coach() {
-  const { email, setEmail, locked, authEnabled } = useAuthEmail();
+  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
   const ctx = useQuery(
     api.riders.coachContext,
@@ -83,23 +84,16 @@ export default function Coach() {
 
   if (!profile) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-4xl sm:text-5xl text-neutral-50">O Coach</h1>
-        <p className="text-sm text-neutral-400">
-          O mentor que lembra de tudo — teus cachês, leads, prazos e sabatinas.
-        </p>
-        {authEnabled && !locked && (
-            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
-              Entrar com WorkOS &rarr;
-            </a>
-          )}
-        <form className="flex flex-col gap-3"
-          onSubmit={(e) => { e.preventDefault(); localStorage.setItem("manager_email", email); setEmail(email); }}>
-          <input className="rounded-xl bg-neutral-900 px-4 py-3" placeholder="seu@email.com" type="email"
-            value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button className="rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black">Entrar</button>
-        </form>
-      </main>
+      <SignIn
+        title="Teu coach"
+        blurb="O manager que lembra de tudo: cachês, leads, prazos e sabatinas."
+        email={email}
+        setEmail={setEmail}
+        locked={locked}
+        authEnabled={authEnabled}
+        ready={ready}
+        profile={profile}
+      />
     );
   }
 

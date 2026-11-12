@@ -39,7 +39,7 @@ function matchesProfile(profile: any, o: any): boolean {
 
 export const run = internalAction({
   handler: async (ctx) => {
-    const profiles = await ctx.runQuery(api.profiles.list, {});
+    const profiles = await ctx.runQuery(internal.profiles.list, {});
     const now = Date.now();
     const in14d = new Date(now + 14 * 24 * 3600 * 1000).toISOString();
     const in3d = new Date(now + 3 * 24 * 3600 * 1000).toISOString();

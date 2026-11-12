@@ -40,6 +40,10 @@ export interface Profile {
   uf?: string;
   bio?: string;
   portfolioUrl?: string;
+  phone?: string;
+  city?: string;
+  goals?: string[];
+  onboardedAt?: number;
   plan: string;
   createdAt: number;
 }

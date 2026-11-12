@@ -1,5 +1,5 @@
 import { internalAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 // Varre os perfis e chama /api/reply-detect (no Next — Composio + LLM ficam
 // lá). O loop matador: resposta de contratante no inbox → lead move no funil.
@@ -7,7 +7,7 @@ export const run = internalAction({
   handler: async (ctx) => {
     const appUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
     if (!appUrl) return { skipped: "APP_URL not set" };
-    const profiles = await ctx.runQuery(api.profiles.list, {});
+    const profiles = await ctx.runQuery(internal.profiles.list, {});
     const out: { email: string; moved?: any[]; error?: string }[] = [];
     for (const profile of profiles) {
       try {

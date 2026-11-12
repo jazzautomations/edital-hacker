@@ -8,6 +8,7 @@ import type { Profile } from "@/lib/types";
 import { calcCachet } from "@/lib/cachet";
 import { ruleFor } from "@/lib/docRules";
 import { useAuthEmail } from "@/lib/useAuth";
+import { SignIn } from "@/components/SignIn";
 
 const NEXT: Record<string, string> = { marcado: "feito", feito: "pago" };
 const STYLE: Record<string, string> = {
@@ -27,7 +28,7 @@ type Gig = {
 };
 
 export default function Agenda() {
-  const { email, setEmail, locked, authEnabled } = useAuthEmail();
+  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
     | Profile | null | undefined;
   const gigs = useQuery(
@@ -101,32 +102,16 @@ export default function Agenda() {
 
   if (!profile) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-4xl sm:text-5xl text-neutral-50">Agenda & cachês</h1>
-        <p className="text-sm text-neutral-400">Entre com seu email pra abrir tua agenda.</p>
-        {authEnabled && !locked && (
-            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
-              Entrar com WorkOS &rarr;
-            </a>
-          )}
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            localStorage.setItem("manager_email", email);
-            setEmail(email);
-          }}
-        >
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="seu@email.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <button className="rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black">Entrar</button>
-        </form>
-      </main>
+      <SignIn
+        title="Agenda e cachês"
+        blurb="Shows, aulas e trabalhos com data, valor e o que já caiu na conta."
+        email={email}
+        setEmail={setEmail}
+        locked={locked}
+        authEnabled={authEnabled}
+        ready={ready}
+        profile={profile}
+      />
     );
   }
 

@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuthEmail } from "@/lib/useAuth";
+import { SignIn } from "@/components/SignIn";
 
 // Rider técnico versionado — o artista mantém trio/banda/solo prontos
 // e manda PDF pro técnico de som antes de qualquer negociação fechar.
@@ -23,7 +24,7 @@ const EMPTY: Rider = {
 };
 
 export default function RiderPage() {
-  const { email, setEmail, locked, authEnabled } = useAuthEmail();
+  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
   const riders = useQuery(
     api.riders.listForProfile,
@@ -37,20 +38,16 @@ export default function RiderPage() {
 
   if (!profile) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-4xl sm:text-5xl text-neutral-50">Rider técnico</h1>
-        {authEnabled && !locked && (
-            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
-              Entrar com WorkOS &rarr;
-            </a>
-          )}
-        <form className="flex flex-col gap-3"
-          onSubmit={(e) => { e.preventDefault(); localStorage.setItem("manager_email", email); setEmail(email); }}>
-          <input className="rounded-xl bg-neutral-900 px-4 py-3" placeholder="seu@email.com" type="email"
-            value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button className="rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black">Entrar</button>
-        </form>
-      </main>
+      <SignIn
+        title="Rider técnico"
+        blurb="Mapa de palco, input list e camarim num PDF que o produtor respeita."
+        email={email}
+        setEmail={setEmail}
+        locked={locked}
+        authEnabled={authEnabled}
+        ready={ready}
+        profile={profile}
+      />
     );
   }
 

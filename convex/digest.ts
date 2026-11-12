@@ -1,12 +1,12 @@
 import { internalAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { sendBatch, type EmailItem } from "../lib/resend";
 
 // Digest de segunda-feira — o "check-in semanal" do coach por email.
 // Ritual que a mentoria cobra milhares: números da semana, prazos, follow-ups.
 export const run = internalAction({
   handler: async (ctx) => {
-    const profiles = await ctx.runQuery(api.profiles.list, {});
+    const profiles = await ctx.runQuery(internal.profiles.list, {});
     const now = Date.now();
     const in7d = new Date(now + 7 * 24 * 3600 * 1000).toISOString();
     const today = new Date(now).toISOString().slice(0, 10);

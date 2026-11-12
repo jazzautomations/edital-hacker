@@ -52,6 +52,8 @@ export default defineSchema({
     photoUrl: v.optional(v.string()),
     videoUrl: v.optional(v.string()),
     musicLinks: v.optional(v.array(v.string())),
+    goals: v.optional(v.array(v.string())), // o que busca: editais, shows, aulas…
+    onboardedAt: v.optional(v.number()),
     plan: v.string(),
     createdAt: v.number(),
   }).index("by_email", ["email"]),
@@ -85,6 +87,11 @@ export default defineSchema({
     kind: v.string(),
     expiresAt: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
+    fileName: v.optional(v.string()),
+    contentType: v.optional(v.string()),
+    size: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
   }).index("by_profile", ["profileId"]),
 
   alertLog: defineTable({
@@ -134,6 +141,18 @@ export default defineSchema({
     checkoutId: v.string(),
     paidAt: v.number(),
   }).index("by_profile_opp", ["profileId", "opportunityId"]),
+
+  // Cobrança Pix inline (QR na tela). É o elo que faltava entre "pagou" e
+  // "destravou": o id da cobrança aponta pro perfil + edital.
+  pixCharges: defineTable({
+    pixId: v.string(),
+    profileId: v.id("profiles"),
+    opportunityId: v.id("opportunities"),
+    amount: v.number(),
+    status: v.string(), // PENDING | PAID | EXPIRED | CANCELLED
+    createdAt: v.number(),
+    paidAt: v.optional(v.number()),
+  }).index("by_pix", ["pixId"]),
 
   leads: defineTable({
     profileId: v.id("profiles"),

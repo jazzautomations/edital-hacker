@@ -10,7 +10,9 @@ export const getByEmail = query({
       .unique(),
 });
 
-export const list = query({
+// INTERNA: devolve todos os perfis (e-mail, telefone). Era pública — qualquer
+// visitante listava a base inteira. Só as rotinas agendadas usam.
+export const list = internalQuery({
   handler: async (ctx) => await ctx.db.query("profiles").collect(),
 });
 
@@ -34,16 +36,23 @@ export const upsert = mutation({
     photoUrl: v.optional(v.string()),
     videoUrl: v.optional(v.string()),
     musicLinks: v.optional(v.array(v.string())),
+    goals: v.optional(v.array(v.string())),
+    onboarded: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { onboarded, ...args }) => {
     const existing = await ctx.db
       .query("profiles")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
+    const stamp = onboarded ? { onboardedAt: Date.now() } : {};
     if (existing) {
-      await ctx.db.patch(existing._id, args);
+      // não apaga o que já existe quando um formulário manda campo vazio
+      const patch = Object.fromEntries(
+        Object.entries(args).filter(([, val]) => val !== undefined && val !== "" && !(Array.isArray(val) && val.length === 0))
+      );
+      await ctx.db.patch(existing._id, { ...patch, ...(existing.onboardedAt ? {} : stamp) });
       return existing._id;
     }
-    return await ctx.db.insert("profiles", { ...args, plan: "free", createdAt: Date.now() });
+    return await ctx.db.insert("profiles", { ...args, ...stamp, plan: "free", createdAt: Date.now() });
   },
 });

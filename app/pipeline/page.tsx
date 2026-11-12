@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { PipelineItem, Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { SignIn } from "@/components/SignIn";
 
 interface Doc {
   _id: string;
@@ -33,7 +34,7 @@ const STAGES: { key: string; label: string }[] = [
 ];
 
 export default function Pipeline() {
-  const { email, setEmail, locked, authEnabled } = useAuthEmail();
+  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
   const [creating, setCreating] = useState(false);
   const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
     | Profile
@@ -65,44 +66,16 @@ export default function Pipeline() {
 
   if (!profile) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-4xl sm:text-5xl text-neutral-50">Seu pipeline de carreira</h1>
-        <p className="text-sm text-neutral-400">
-          Entre com seu email pra criar (ou achar) seu perfil de artista.
-        </p>
-        {authEnabled && !locked && (
-            <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
-              Entrar com WorkOS &rarr;
-            </a>
-          )}
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!email || creating) return;
-            setCreating(true);
-            await upsertProfile({
-              name: email.split("@")[0],
-              email,
-              personType: "Pessoa Física",
-              artAreas: [],
-            });
-            localStorage.setItem("manager_email", email);
-            setCreating(false);
-          }}
-        >
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="seu@email.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <button className="rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black">
-            {creating ? "Abrindo…" : "Entrar"}
-          </button>
-        </form>
-      </main>
+      <SignIn
+        title="Teu pipeline"
+        blurb="Editais e propostas num funil só, do interesse à prestação de contas."
+        email={email}
+        setEmail={setEmail}
+        locked={locked}
+        authEnabled={authEnabled}
+        ready={ready}
+        profile={profile}
+      />
     );
   }
 

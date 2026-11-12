@@ -71,6 +71,37 @@ const DISCOVER_SCHEMA = {
   required: ["opportunities"],
 };
 
+
+/**
+ * /v2/agent é ASSÍNCRONO: o POST devolve só um id e o resultado sai depois em
+ * GET /agent/{id} (uma prospecção real leva ~100s). O código antigo esperava os
+ * dados na resposta do POST e sempre falhava com "status unknown".
+ */
+async function runAgent<T = any>(body: Record<string, unknown>, maxWaitMs = 240_000): Promise<T> {
+  const res = await fetch(`${BASE}/agent`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Firecrawl agent HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  const started = await res.json();
+  if (started?.data && started?.status === "completed") return started.data as T;
+  const id = started?.id;
+  if (!id) throw new Error("Firecrawl agent não devolveu id");
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 6000));
+    const poll = await fetch(`${BASE}/agent/${id}`, { headers: { Authorization: `Bearer ${key()}` } });
+    if (!poll.ok) continue;
+    const j = await poll.json();
+    if (j?.status === "completed") return (j.data ?? {}) as T;
+    if (j?.status === "failed" || j?.status === "cancelled") {
+      throw new Error(`a busca falhou no provedor (${j.status})`);
+    }
+  }
+  throw new Error("a busca demorou mais que o limite — tenta de novo com um nicho mais específico");
+}
+
 /**
  * /v2/agent: descobre editais numa fonte sem depender de API ou de URL conhecida.
  * Usado para instâncias com WAF (DF, MA) e sites de prefeitura fora da rede Mapas.
@@ -80,10 +111,7 @@ export async function discoverOpportunities(
   baseUrl?: string,
   maxCredits = 50
 ): Promise<DiscoveredOpportunity[]> {
-  const res = await fetch(`${BASE}/agent`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const data = await runAgent<{ opportunities?: any[] }>({
       prompt:
         `Liste as oportunidades culturais (editais, prêmios, chamadas públicas) com inscrições abertas agora em "${sourceName}". ` +
         `Para cada uma, traga o nome, a URL oficial da página do edital, o prazo final de inscrição e uma descrição curta.`,
@@ -92,14 +120,8 @@ export async function discoverOpportunities(
       schema: DISCOVER_SCHEMA,
       model: "spark-2",
       maxCredits,
-    }),
-  });
-  if (!res.ok) throw new Error(`Firecrawl agent HTTP ${res.status}`);
-  const json = await res.json();
-  if (json?.status !== "completed" && !json?.data) {
-    throw new Error(`Firecrawl agent status ${json?.status ?? "unknown"}`);
-  }
-  return json?.data?.opportunities ?? [];
+    });
+  return data?.opportunities ?? [];
 }
 
 export interface DiscoveredLead {
@@ -142,10 +164,7 @@ export async function discoverLeads(
   uf?: string,
   maxCredits = 40
 ): Promise<DiscoveredLead[]> {
-  const res = await fetch(`${BASE}/agent`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key()}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const data = await runAgent<{ leads?: any[] }>({
       prompt:
         `Encontre ${leadType} em ${city}${uf ? `/${uf}` : ""}, Brasil, que contratam ou poderiam contratar ${niche}. ` +
         `Para cada lead, traga nome, tipo, site ou Instagram, contato público de booking/comercial (email, telefone ou @usuario) e uma descrição curta do que é. ` +
@@ -154,14 +173,8 @@ export async function discoverLeads(
       schema: LEAD_SCHEMA,
       model: "spark-2",
       maxCredits,
-    }),
-  });
-  if (!res.ok) throw new Error(`Firecrawl agent HTTP ${res.status}`);
-  const json = await res.json();
-  if (json?.status !== "completed" && !json?.data) {
-    throw new Error(`Firecrawl agent status ${json?.status ?? "unknown"}`);
-  }
-  return json?.data?.leads ?? [];
+    });
+  return data?.leads ?? [];
 }
 
 export interface MonitorTarget {

@@ -120,16 +120,16 @@ export default function Home() {
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/oportunidades"
+              href="/comecar"
               className="rounded-full bg-emerald-400 px-6 py-3 font-semibold text-neutral-950 hover:bg-emerald-300"
             >
-              Abrir o radar, é grátis
+              Começar grátis
             </Link>
             <Link
-              href="/coach"
+              href="/oportunidades"
               className="rounded-full border border-neutral-700 px-6 py-3 font-semibold text-neutral-100 hover:border-neutral-500 hover:bg-neutral-900"
             >
-              Falar com o coach
+              Ver editais abertos
             </Link>
           </div>
           <p className="text-sm text-neutral-500">
@@ -212,10 +212,10 @@ export default function Home() {
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link
-              href="/oportunidades"
+              href="/comecar"
               className="rounded-full bg-emerald-400 px-6 py-3 font-semibold text-neutral-950 hover:bg-emerald-300"
             >
-              Entrar no radar
+              Criar meu perfil
             </Link>
             <Link
               href="/assinatura"

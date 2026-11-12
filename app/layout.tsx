@@ -45,7 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Providers>
           <AppNav />
           <LoginNotice />
-          {children}
+          <div id="conteudo" className="flex flex-1 flex-col">{children}</div>
         </Providers>
       </body>
     </html>
