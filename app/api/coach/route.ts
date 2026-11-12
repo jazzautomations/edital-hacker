@@ -26,7 +26,10 @@ export async function POST(req: Request) {
     content: m.text,
   }));
 
-  const { reply, actionsRun } = await chatWithTools(
+  let reply = "";
+  let actionsRun: { name: string; result: string }[] = [];
+  try {
+    ({ reply, actionsRun } = await chatWithTools(
     [
       { role: "system", content: `${COACH_SYSTEM}\n\n=== MEMÓRIA DA CARREIRA ===\n${contextBlock(fullCtx)}` },
       ...history,
@@ -45,7 +48,14 @@ export async function POST(req: Request) {
         .catch(() => {});
       return result;
     }
-  );
+    ));
+  } catch (e) {
+    console.error("[coach]", e);
+    return NextResponse.json(
+      { reply: "O coach tá sem cérebro agora (provedor de IA fora). Tenta de novo em 1 min.", error: String(e).slice(0, 200) },
+      { status: 503 }
+    );
+  }
 
   const finalReply =
     reply ||

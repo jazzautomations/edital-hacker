@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { sabatinaTurn, type SabatinaContext, type ChatTurn } from "@/lib/llm";
+import { llmConfigured, sabatinaTurn, type SabatinaContext, type ChatTurn } from "@/lib/llm";
 
 export async function POST(req: Request) {
-  if (!process.env.LLM_API_KEY) {
+  if (!llmConfigured()) {
     return NextResponse.json({ error: "LLM_API_KEY not configured" }, { status: 503 });
   }
   try {

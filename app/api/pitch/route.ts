@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { chat } from "@/lib/llm";
+import { chat, llmConfigured } from "@/lib/llm";
 
 // O coach escreve o pitch de booking; o artista revisa e envia (mailto).
 // Filosofia "preparar, não executar por você" — e zero OAuth na demo.
 export async function POST(req: Request) {
-  if (!process.env.LLM_API_KEY) {
+  if (!llmConfigured()) {
     return NextResponse.json({ error: "LLM_API_KEY not configured" }, { status: 503 });
   }
   try {

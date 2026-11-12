@@ -33,7 +33,11 @@ Regras:
 
 export function contextBlock(c: any): string {
   const p = c.profile;
+  const hoje = new Date().toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "2-digit", year: "numeric",
+  });
   const lines: (string | null)[] = [
+    `HOJE: ${hoje} (use isso pra resolver "sexta", "amanhã", "mês que vem")`,
     `ARTISTA: ${p.name} (${p.personType})${p.city || p.uf ? ` — ${[p.city, p.uf].filter(Boolean).join("/")}` : ""}`,
     p.artAreas?.length ? `Áreas: ${p.artAreas.join(", ")}` : null,
     p.phone ? `Telefone: ${p.phone}` : null,
