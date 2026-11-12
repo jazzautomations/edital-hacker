@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import VoiceSabatina from "@/components/VoiceSabatina";
 import { useAuthEmail } from "@/lib/useAuth";
+import { RichText } from "@/lib/format";
 
 // O Coach — chat com memória total da carreira. É a promessa central:
 // um mentor que sabe teus cachês, teus leads, teus prazos e tuas sabatinas
@@ -74,12 +75,16 @@ export default function Coach() {
       setMsgs(ctx.history.map((m: any) => ({ role: m.role, text: m.text })));
     }
   }, [ctx, msgs.length]);
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [msgs]);
+  useEffect(() => {
+    // chaves: scrollIntoView() agora devolve Promise no Chromium e o React
+    // tentava chamá-la como cleanup → "i is not a function" derrubava a página
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
 
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-2xl font-bold">O Coach</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">O Coach</h1>
         <p className="text-sm text-neutral-400">
           O mentor que lembra de tudo — teus cachês, leads, prazos e sabatinas.
         </p>
@@ -125,11 +130,10 @@ export default function Coach() {
     : "carregando memória…";
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-6 py-6">
-      <header className="mb-4 flex items-end justify-between">
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-6 sm:px-6">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link href="/" className="font-mono text-xs text-emerald-400">manager_</Link>
-          <h1 className="text-2xl font-bold">O Coach</h1>
+          <h1 className="text-4xl sm:text-5xl text-neutral-50">O Coach</h1>
           <p className="font-mono text-[10px] text-neutral-500">memória: {stats}</p>
         </div>
         <div className="flex gap-3 text-xs">
@@ -182,10 +186,10 @@ export default function Coach() {
         {msgs.map((m, i) => (
           <div key={i} className={`mb-3 flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              m.role === "user" ? "bg-emerald-600/20 text-emerald-100" : "bg-neutral-900 text-neutral-200"
+              m.role === "user" ? "bg-emerald-400 text-neutral-950" : "border border-neutral-800 bg-neutral-900 text-neutral-200"
             }`}>
               {m.role === "assistant" && <p className="mb-1 font-mono text-[9px] uppercase text-emerald-500">coach</p>}
-              <p className="whitespace-pre-wrap">{m.text}</p>
+              <p className="whitespace-pre-wrap">{m.role === "assistant" ? <RichText text={m.text} /> : m.text}</p>
               {m.actions?.length ? (
                 <p className="mt-2 border-t border-neutral-700/60 pt-2 font-mono text-[10px] text-emerald-400">
                   ⚙️ executou: {m.actions.map((a) => ACTION_LABEL[a] ?? a).join(" · ")}

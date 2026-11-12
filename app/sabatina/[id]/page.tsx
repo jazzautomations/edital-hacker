@@ -9,6 +9,7 @@ import type { SabatinaContext, ChatTurn } from "@/lib/llm";
 import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
 import VoiceSabatina from "@/components/VoiceSabatina";
 import { useAuthEmail } from "@/lib/useAuth";
+import { RichText, tidyTitle } from "@/lib/format";
 
 interface Msg {
   role: "user" | "model";
@@ -170,9 +171,9 @@ export default function Sabatina({
 
   if (!started) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-6 py-10">
+      <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <Link href="/oportunidades" className="text-sm text-emerald-400">← voltar</Link>
-        <h1 className="mt-4 text-2xl font-bold">{opp.name}</h1>
+        <h1 className="mt-4 text-3xl text-neutral-50 sm:text-4xl">{tidyTitle(opp.name)}</h1>
         <p className="mt-1 text-neutral-400">{opp.sourceName}</p>
 
         {opp.enriched ? (
@@ -265,10 +266,10 @@ export default function Sabatina({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-6 py-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6">
         <p className="font-mono text-xs text-emerald-400">SABATINA DE BANCA</p>
-        <h1 className="text-xl font-bold">{opp.name}</h1>
+        <h1 className="line-clamp-2 text-2xl text-neutral-50 sm:text-3xl">{tidyTitle(opp.name)}</h1>
       </div>
 
       <div className="mb-4">
@@ -281,11 +282,11 @@ export default function Sabatina({
             key={i}
             className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
               m.role === "user"
-                ? "self-end bg-emerald-600/20 text-emerald-100"
-                : "self-start bg-neutral-800"
+                ? "self-end bg-emerald-400 text-neutral-950"
+                : "self-start border border-neutral-800 bg-neutral-900 leading-relaxed text-neutral-200"
             }`}
           >
-            {m.text}
+            <span className="whitespace-pre-wrap"><RichText text={m.text} /></span>
           </div>
         ))}
         {loading && <p className="text-sm text-neutral-500">Parecerista pensando…</p>}

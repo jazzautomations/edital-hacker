@@ -39,7 +39,7 @@ export default function Prestacao() {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-2xl font-bold">Prestação de contas</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">Prestação de contas</h1>
         <p className="text-sm text-neutral-400">Entre com seu email pra gerar o relatório.</p>
         {authEnabled && !locked && (
             <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
@@ -61,10 +61,9 @@ export default function Prestacao() {
   const opp = items?.find((i) => i.opportunity._id === oppId)?.opportunity;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
       <header className="mb-8">
-        <Link href="/" className="font-mono text-xs text-emerald-400">manager_</Link>
-        <h1 className="text-3xl font-bold">Prestação de contas</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">Prestação de contas</h1>
         <p className="mt-1 text-sm text-neutral-400">
           Executou o edital? Agora prova. O coach monta o Relatório de Objeto no formato Anexo V
           (PNAB/Mapas) — tu cola na plataforma ou anexa o PDF.

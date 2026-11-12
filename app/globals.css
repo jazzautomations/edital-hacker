@@ -1,26 +1,142 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ───────── Manager — design tokens ─────────
+   Tema "bastidor": escuro quente (madeira de palco, não preto de dashboard)
+   + uma cor-assinatura de luz de palco. As páginas usam a escala neutral/
+   emerald do Tailwind — redefinir a escala aqui reestiliza o app inteiro
+   de forma consistente. Trocar a assinatura = trocar só o bloco emerald. */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-display-serif), ui-serif, Georgia, serif;
+
+  /* neutros quentes */
+  --color-neutral-50: #faf8f5;
+  --color-neutral-100: #f3efe8;
+  --color-neutral-200: #e4ded4;
+  --color-neutral-300: #cbc3b6;
+  --color-neutral-400: #a59c8e;
+  --color-neutral-500: #7f776b;
+  --color-neutral-600: #5d564d;
+  --color-neutral-700: #433e37;
+  --color-neutral-800: #2d2924;
+  --color-neutral-900: #1d1a17;
+  --color-neutral-950: #12100e;
+
+  /* assinatura: luz de palco (lima) */
+  --color-emerald-50: #f8fee8;
+  --color-emerald-100: #eefccc;
+  --color-emerald-200: #ddf89d;
+  --color-emerald-300: #cdf373;
+  --color-emerald-400: #c1ee55;
+  --color-emerald-500: #aee034;
+  --color-emerald-600: #8cbb1f;
+  --color-emerald-700: #6a8f17;
+  --color-emerald-800: #4c6815;
+  --color-emerald-900: #344811;
+  --color-emerald-950: #1c2808;
+
+  /* login = branco (ação neutra), não azul competindo com a assinatura */
+  --color-sky-400: #f3efe8;
+  --color-sky-500: #f3efe8;
+  --color-sky-600: #e4ded4;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-neutral-950);
+  }
+  body {
+    background:
+      radial-gradient(1200px 500px at 50% -200px, color-mix(in oklab, var(--color-emerald-500) 7%, transparent), transparent 70%),
+      var(--color-neutral-950);
+    background-attachment: fixed;
+    color: var(--color-neutral-100);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+  ::selection {
+    background: var(--color-emerald-500);
+    color: var(--color-neutral-950);
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* campos: superfície elevada + borda + foco visível */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    border: 1px solid var(--color-neutral-800);
+    color: var(--color-neutral-100);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    min-width: 0;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-neutral-500);
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-emerald-500);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-emerald-500) 22%, transparent);
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-emerald-500);
+  }
+
+  button,
+  a {
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.1s;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  button:not(:disabled):active {
+    transform: translateY(1px);
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--color-emerald-500);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-800);
+    border-radius: 99px;
+    border: 2px solid var(--color-neutral-950);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* cartões: toda borda neutral-800 arredondada ganha superfície levemente elevada */
+@layer components {
+  .rounded-2xl.border-neutral-800,
+  .rounded-xl.border-neutral-800 {
+    background-color: color-mix(in oklab, var(--color-neutral-900) 55%, transparent);
+  }
+  .rounded-2xl.border-neutral-800:hover {
+    border-color: var(--color-neutral-700);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
 }

@@ -14,8 +14,8 @@ const stats: Array<[string, string]> = [
     "dos trabalhadores da arte apontam “encontrar empresário” como a maior dificuldade da carreira",
   ],
   [
-    "110+",
-    "editais vivos no radar, lidos de 30 fontes: Mapas federais, estaduais e o long tail municipal do PNAB",
+    "150+",
+    "editais vivos no radar agora, de 13 fontes: Mapas federais, estaduais, PNCP e o long tail municipal do PNAB",
   ],
 ];
 
@@ -50,113 +50,148 @@ const pillars = [
   },
 ];
 
+function VerdictPreview() {
+  const rows: Array<[string, number]> = [
+    ["Qualificação do proponente", 8],
+    ["Planejamento e orçamento", 4],
+    ["Impacto e relevância", 7],
+    ["Mérito e coerência", 9],
+  ];
+  return (
+    <div className="relative w-full max-w-md">
+      <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-emerald-500/10 blur-3xl" aria-hidden />
+      <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+            parecer da banca · simulado
+          </p>
+          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-300">
+            PNAB · fomento
+          </span>
+        </div>
+        <div className="mt-4 flex items-end gap-3">
+          <p className="font-display text-7xl leading-none text-emerald-300">72</p>
+          <p className="pb-2 text-sm text-neutral-400">/100 · passa no corte, mas por pouco</p>
+        </div>
+        <div className="mt-5 space-y-2.5">
+          {rows.map(([label, n]) => (
+            <div key={label}>
+              <div className="flex justify-between text-xs">
+                <span className="text-neutral-300">{label}</span>
+                <span className={`font-mono ${n <= 5 ? "text-amber-400" : "text-neutral-400"}`}>{n}/10</span>
+              </div>
+              <div className="mt-1 h-1.5 rounded-full bg-neutral-800">
+                <div
+                  className={`h-1.5 rounded-full ${n <= 5 ? "bg-amber-400" : "bg-emerald-400"}`}
+                  style={{ width: `${n * 10}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-200">
+          <b className="font-semibold">A banca vai cobrar:</b> orçamento global sem itemização e
+          contrapartida que repete o objeto. Arruma isso antes de inscrever.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col items-center gap-20 px-6 py-20">
-      {/* hero — a promessa do coach */}
-      <section className="flex flex-col items-center gap-5 pt-6 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">
-          manager_ · coach de carreira para trabalhadores da arte
-        </p>
-        <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-          Você cuida da arte. O Manager cuida da{" "}
-          <span className="text-emerald-400">renda</span>.
-        </h1>
-        <p className="max-w-2xl text-lg text-neutral-400">
-          Editais, gigs privados e financiamento de fãs são fontes da mesma
-          renda. O Manager organiza todas: caça as oportunidades certas, sabatina
-          você contra a rubrica real da banca e controla cada cachê — para
-          músicos, produtores e professores de arte que não querem mais esperar
-          empresário, gravadora ou produtor.
-        </p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/coach"
-            className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black transition hover:bg-emerald-400"
-          >
-            Falar com o Coach →
-          </Link>
-          <Link
-            href="/oportunidades"
-            className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
-          >
-            Radar de editais — grátis
-          </Link>
-          <Link
-            href="/assinatura"
-            className="text-sm text-neutral-400 underline-offset-4 transition hover:text-emerald-400 hover:underline"
-          >
-            Sabatinar proposta · R$ 9,90
-          </Link>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-4 pb-24 pt-12 sm:px-6 sm:pt-20">
+      {/* hero */}
+      <section className="grid items-center gap-12 lg:grid-cols-[1.15fr_1fr]">
+        <div className="flex flex-col gap-6">
+          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1 text-xs text-neutral-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+            Coach de carreira para trabalhadores da arte
+          </p>
+          <h1 className="text-[3.25rem] text-neutral-50 sm:text-7xl">
+            Você cuida da arte. O Manager cuida da{" "}
+            <em className="text-emerald-300">renda.</em>
+          </h1>
+          <p className="max-w-xl text-lg leading-relaxed text-neutral-400">
+            Editais, gigs e cachês numa conta só. O Manager acha as oportunidades
+            certas, te sabatina contra a rubrica real da banca e cobra quem
+            atrasou o pagamento. Pra quem cansou de esperar empresário,
+            gravadora ou produtor.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/oportunidades"
+              className="rounded-full bg-emerald-400 px-6 py-3 font-semibold text-neutral-950 hover:bg-emerald-300"
+            >
+              Abrir o radar, é grátis
+            </Link>
+            <Link
+              href="/coach"
+              className="rounded-full border border-neutral-700 px-6 py-3 font-semibold text-neutral-100 hover:border-neutral-500 hover:bg-neutral-900"
+            >
+              Falar com o coach
+            </Link>
+          </div>
+          <p className="text-sm text-neutral-500">
+            Sabatina avulsa por R$ 9,90 no Pix · sem comissão sobre cachê
+          </p>
+        </div>
+        <div className="flex justify-center lg:justify-end">
+          <VerdictPreview />
         </div>
       </section>
 
-      {/* prova numérica — medida em reais e em horas devolvidas */}
-      <section className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* números */}
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-800 lg:grid-cols-4">
         {stats.map(([num, label]) => (
-          <div
-            key={num}
-            className="rounded-2xl border border-neutral-800 p-5 text-center"
-          >
-            <p className="text-2xl font-bold text-emerald-400">{num}</p>
-            <p className="mt-1 text-sm text-neutral-400">{label}</p>
+          <div key={num} className="bg-neutral-950 p-6">
+            <p className="font-display text-4xl text-neutral-50 sm:text-5xl">{num}</p>
+            <p className="mt-2 text-sm leading-relaxed text-neutral-400">{label}</p>
           </div>
         ))}
       </section>
 
-      {/* os quatro pilares — na progressão do método */}
-      <section className="flex w-full flex-col gap-8 border-t border-neutral-800 pt-12">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-neutral-500">
-            o método
-          </p>
-          <h2 className="max-w-2xl text-2xl font-bold md:text-3xl">
-            Um coach. Quatro pilares. Nenhuma fonte de renda deixada na mesa.
+      {/* pilares */}
+      <section className="flex flex-col gap-10">
+        <div className="max-w-2xl">
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-emerald-400">o método</p>
+          <h2 className="mt-3 font-display text-4xl leading-tight text-neutral-50 sm:text-5xl">
+            Um coach, quatro frentes. Nenhuma renda esquecida na mesa.
           </h2>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-neutral-500">
-            <span className="text-emerald-400">b</span>ase ·{" "}
-            <span className="text-emerald-400">r</span>epertório ·{" "}
-            <span className="text-emerald-400">a</span>udiência ·{" "}
-            <span className="text-emerald-400">v</span>enda · entrega{" "}
-            <span className="text-emerald-400">o</span>rientada
-          </p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {pillars.map((p) => (
+          {pillars.map((p, i) => (
             <Link
               key={p.tag}
               href={p.href}
-              className="group rounded-2xl border border-neutral-800 p-6 transition hover:border-emerald-700"
+              className="group flex flex-col rounded-3xl border border-neutral-800 bg-neutral-900/40 p-7 hover:border-emerald-500/50 hover:bg-neutral-900"
             >
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-emerald-400">
-                {p.tag}
-              </p>
-              <h3 className="mt-3 text-xl font-semibold">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-                {p.body}
-              </p>
-              <p className="mt-4 text-sm font-semibold text-emerald-400 opacity-80 transition group-hover:opacity-100">
-                {p.cta}
-              </p>
+              <div className="flex items-baseline justify-between">
+                <span className="font-display text-5xl text-neutral-700 group-hover:text-emerald-400">
+                  0{i + 1}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+                  {p.tag.split("·")[1]?.trim()}
+                </span>
+              </div>
+              <h3 className="mt-6 text-xl font-semibold text-neutral-50">{p.title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-neutral-400">{p.body}</p>
+              <p className="mt-6 text-sm font-semibold text-emerald-400">{p.cta}</p>
             </Link>
           ))}
         </div>
-
-        {/* arsenal — os documentos que mentoria vende, gerados em 1 clique */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
-            o arsenal do coach:
-          </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-sm text-neutral-500">Documentos em 1 clique:</span>
           {[
             ["Rider técnico", "/rider"],
-            ["Press kit (EPK)", "/epk"],
+            ["Press kit (EPK)", "/agenda"],
             ["Prestação de contas", "/prestacao"],
             ["Agenda & cachês", "/agenda"],
           ].map(([label, href]) => (
             <Link
-              key={href}
+              key={label}
               href={href}
-              className="rounded-full border border-neutral-800 px-4 py-1.5 text-xs text-neutral-400 transition hover:border-emerald-500/60 hover:text-emerald-300"
+              className="rounded-full border border-neutral-800 px-4 py-1.5 text-sm text-neutral-300 hover:border-emerald-500/60 hover:text-emerald-300"
             >
               {label}
             </Link>
@@ -164,32 +199,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA duplo */}
-      <section className="flex w-full flex-col items-center gap-5 rounded-3xl border border-emerald-900/60 bg-emerald-950/20 px-6 py-12 text-center">
-        <h2 className="max-w-2xl text-2xl font-bold md:text-3xl">
-          Sua próxima fonte de renda já está aberta.
-        </h2>
-        <p className="max-w-xl text-neutral-400">
-          O radar é grátis. A sabatina custa menos que uma corda de violão — e o
-          coach não tira férias nem cobra comissão de show.
-        </p>
-        <div className="mt-1 flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/oportunidades"
-            className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black transition hover:bg-emerald-400"
-          >
-            Entrar no radar — grátis →
-          </Link>
-          <Link
-            href="/assinatura"
-            className="rounded-xl border border-neutral-700 px-6 py-3 font-semibold transition hover:border-neutral-500"
-          >
-            Sabatinar uma proposta · R$ 9,90
-          </Link>
+      {/* CTA final */}
+      <section className="relative overflow-hidden rounded-[2rem] border border-neutral-800 bg-neutral-900 px-6 py-16 text-center sm:px-12">
+        <div className="absolute inset-x-0 -top-40 -z-0 mx-auto h-80 w-[40rem] max-w-full rounded-full bg-emerald-500/15 blur-3xl" aria-hidden />
+        <div className="relative flex flex-col items-center gap-5">
+          <h2 className="max-w-2xl font-display text-4xl leading-tight text-neutral-50 sm:text-6xl">
+            Sua próxima fonte de renda <em className="text-emerald-300">já está aberta.</em>
+          </h2>
+          <p className="max-w-xl text-neutral-400">
+            O radar é grátis. A sabatina custa menos que uma corda de violão, e o
+            coach não tira férias nem cobra comissão de show.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link
+              href="/oportunidades"
+              className="rounded-full bg-emerald-400 px-6 py-3 font-semibold text-neutral-950 hover:bg-emerald-300"
+            >
+              Entrar no radar
+            </Link>
+            <Link
+              href="/assinatura"
+              className="rounded-full border border-neutral-700 px-6 py-3 font-semibold hover:border-neutral-500"
+            >
+              Ver planos
+            </Link>
+          </div>
+          <p className="font-mono text-xs text-neutral-500">sem promessa de aprovação · promessa de preparo</p>
         </div>
-        <p className="font-mono text-xs text-neutral-500">
-          sem promessa de aprovação · promessa de preparo
-        </p>
       </section>
     </main>
   );

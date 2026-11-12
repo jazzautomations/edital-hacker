@@ -102,7 +102,7 @@ export default function Prospeccao() {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-2xl font-bold">Prospecção</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">Prospecção</h1>
         <p className="text-sm text-neutral-400">
           Entre com seu email pra carregar seu perfil antes de caçar leads.
         </p>
@@ -138,12 +138,9 @@ export default function Prospeccao() {
     .filter(([, ls]) => ls.length > 0);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-6 py-10">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <header className="mb-8">
-        <Link href="/" className="font-mono text-xs text-emerald-400">
-          manager_
-        </Link>
-        <h1 className="text-3xl font-bold">Prospecção</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">Prospecção</h1>
         <p className="mt-1 text-sm text-neutral-400">
           O agente caça quem contrata você — casas de show, festivais, marcas, escolas — e vira funil de carreira.
         </p>

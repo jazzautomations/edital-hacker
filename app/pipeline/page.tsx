@@ -66,7 +66,7 @@ export default function Pipeline() {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-2xl font-bold">Seu pipeline de carreira</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">Seu pipeline de carreira</h1>
         <p className="text-sm text-neutral-400">
           Entre com seu email pra criar (ou achar) seu perfil de artista.
         </p>
@@ -107,13 +107,10 @@ export default function Pipeline() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
-      <header className="mb-8 flex items-end justify-between">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/" className="font-mono text-xs text-emerald-400">
-            manager_
-          </Link>
-          <h1 className="text-3xl font-bold">Pipeline de {profile.name}</h1>
+          <h1 className="text-4xl sm:text-5xl text-neutral-50">Pipeline de {profile.name}</h1>
         </div>
         <div className="flex gap-4 text-sm">
           <Link href="/prestacao" className="text-amber-400 hover:underline">

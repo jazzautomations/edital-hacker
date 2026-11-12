@@ -38,7 +38,7 @@ export default function RiderPage() {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-2xl font-bold">Rider técnico</h1>
+        <h1 className="text-4xl sm:text-5xl text-neutral-50">Rider técnico</h1>
         {authEnabled && !locked && (
             <a href="/login" className="rounded-xl bg-sky-500 px-4 py-3 text-center font-semibold text-black">
               Entrar com WorkOS &rarr;
@@ -75,11 +75,10 @@ export default function RiderPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
-      <header className="mb-8 flex items-end justify-between">
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/" className="font-mono text-xs text-emerald-400">manager_</Link>
-          <h1 className="text-3xl font-bold">Rider técnico</h1>
+          <h1 className="text-4xl sm:text-5xl text-neutral-50">Rider técnico</h1>
           <p className="mt-1 text-sm text-neutral-400">
             O documento que separa amador de profissional — mapa de palco, input list e camarim em PDF.
           </p>

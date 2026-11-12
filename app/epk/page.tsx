@@ -44,7 +44,7 @@ function EpkInner() {
     .slice(0, 6);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10 print:py-4">
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12 print:py-4">
       {/* 1. Header — quem é */}
       <header className="mb-10 flex items-start gap-6">
         {profile.photoUrl ? (
@@ -54,7 +54,7 @@ function EpkInner() {
           <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-emerald-500/10 text-4xl">🎤</div>
         )}
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">{profile.name}</h1>
+          <h1 className="text-4xl tracking-tight text-neutral-50">{profile.name}</h1>
           <p className="mt-1 text-lg text-emerald-400">
             {profile.tagline ?? `${profile.personType}${profile.city || profile.uf ? ` · ${[profile.city, profile.uf].filter(Boolean).join("/")}` : ""}`}
           </p>

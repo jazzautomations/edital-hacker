@@ -97,9 +97,8 @@ function Inner() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-10">
-      <Link href="/" className="font-mono text-xs text-emerald-400">manager_</Link>
-      <h1 className="mt-2 text-3xl font-bold">Menos que a comissão de um show.</h1>
+    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+      <h1 className="mt-2 text-4xl sm:text-5xl text-neutral-50">Menos que a comissão de um show.</h1>
       <p className="mt-1 text-neutral-400">
         Um cachê de R$ 800 custa R$ 120–160 pro booker. Aqui custa R$ 49 — e não
         some com 20% de tudo que você ganha.
