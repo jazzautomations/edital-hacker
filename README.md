@@ -4,43 +4,69 @@
 
 O artista independente brasileiro não tem empresário — 32% dizem que a maior
 dificuldade da carreira é encontrar um (Pesquisa Empresariamento Artístico,
-Anita Carvalho). Enquanto isso, R$ 2,4 bilhões por ano em fomento público ficam
-atrás de burocracia, e um booker humano cobra 15–20% de cada show.
+Anita Carvalho). Enquanto isso, o fomento público fica atrás de burocracia, e um booker
+humano cobra 15–20% de cada show.
 
 Manager é o empresário que cabe no bolso: um agente que encontra as
 oportunidades que aceitam você (editais, prêmios, residências, gigs), sabatina
 sua proposta como uma banca de verdade, organiza seu pipeline de carreira e
 cobra uma fração da comissão humana — via Pix.
 
-## Como funciona
+**No ar:** https://editalhacker.jazzautomations.com.br
 
-1. **Radar** — ingere oportunidades de 12+ instâncias da rede Mapas Culturais
-   (federal + estaduais + municipais) via API pública; enriquece cada edital
-   com Firecrawl + Gemini em um schema estruturado (elegibilidade,
-   desclassificadores, documentos, rubrica, prazos).
-2. **Sabatina de banca** — um parecerista simulado entrevista o artista contra
-   a rubrica real do edital e devolve score 0–100, gaps e documentos faltantes.
-   (Voz em tempo real via Gemini Live + ephemeral tokens é o stretch goal.)
-3. **CRM de carreira** — pipeline kanban: descoberta → interessado → inscrito →
-   ganho → execução → prestação de contas. Contatos, documentos, alertas por
-   email (Resend) quando abre edital que aceita seu perfil.
-4. **Monetização** — free tier (radar) → R$49/mês (sabatina + CRM) →
-   R$99/mês (prestação de contas + contratos) → microtransação Pix por edital.
-   Checkout via AbacatePay (assinaturas nativas).
+## O que o artista faz aqui
+
+1. **Cria o perfil em 1 minuto** (área, estado, como se inscreve em edital) e
+   entra com um código de 6 dígitos no e-mail. Sem senha.
+2. **Radar de editais**: os abertos, lidos todo dia de portais federais,
+   estaduais e municipais, ordenados pelo que combina com o perfil, com o
+   motivo em cada um ("tua área", "no teu estado", "aceita MEI"). Busca e
+   filtro por área, estado, prazo e valor.
+3. **Sabatina de banca**: um parecerista simulado entrevista o artista com os
+   critérios do edital e devolve nota de 0 a 100, nota por critério, o que
+   arrumar e os documentos que faltam. Por texto ou por voz.
+4. **Pipeline**: cada edital na sua etapa, do "vou inscrever" à prestação de
+   contas, com prazo e nota da banca.
+5. **Prospecção**: um agente pesquisa quem contrata na cidade (casas, festivais,
+   escolas, marcas) e traz com contato. Daí sai a abordagem por e-mail ou
+   WhatsApp, a proposta e o contrato em PDF.
+6. **Agenda e cachês**: quanto tem a receber, o que atrasou, calculadora de piso
+   de cachê e roteiro do ECAD em planilha.
+7. **Documentos**: upload de certidões, portfólio e contratos, com validade,
+   aviso antes de vencer e a lista do que quase todo edital exige.
+8. **Coach**: conversa em português normal que executa ("anota que sexta toco
+   no Bar do Zé por R$ 1.500").
+9. **Rider técnico, press kit público e relatório de prestação de contas** em
+   PDF.
+
+Grátis: radar e a primeira sabatina. Depois, R$ 9,90 por edital no Pix ou
+plano mensal/anual. Sem comissão sobre cachê.
 
 ## Stack
 
-Next.js 16 · Convex (DB + crons de ingestão/alertas) · Gemini 3 Flash +
-Gemini Live · Firecrawl · Resend · AbacatePay · WorkOS (auth, fase 2)
+Next.js 16 (App Router, Cache Components) · Convex (banco, arquivos, rotinas
+agendadas) · LLM com fallback entre provedores (Gemini → Groq → OpenAI) ·
+Agora Conversational AI (voz) · Firecrawl (leitura de editais e prospecção) ·
+Resend (código de entrada e avisos) · AbacatePay (Pix e assinatura) ·
+WorkOS AuthKit (login por conta) · Composio (Gmail e Google Agenda)
 
-## Setup
+## Rodar local
 
 ```bash
 cp .env.example .env.local   # preencha as chaves
-npx convex dev               # gera NEXT_PUBLIC_CONVEX_URL + types
-npx convex run ingest:run    # puxa editais abertos das 12 fontes
+npx convex dev               # gera NEXT_PUBLIC_CONVEX_URL e os tipos
+npx convex run ingest:run    # puxa os editais abertos
 npm run dev
 ```
+
+## Segurança e dados
+
+- Entrada por código no e-mail; no banco ficam só hashes do código e da sessão.
+- O perfil só é entregue pra sessão válida. O press kit público mostra só o que
+  o artista expõe pra contratante.
+- Retornos de serviços externos (agente de voz, webhooks) são assinados.
+- O usuário apaga cada documento e a conta inteira pelo próprio app.
+- Detalhes em [/privacidade](https://editalhacker.jazzautomations.com.br/privacidade).
 
 ## Regras do hack
 
