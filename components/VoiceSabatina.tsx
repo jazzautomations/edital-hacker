@@ -36,6 +36,7 @@ export default function VoiceSabatina({
   const [agentOn, setAgentOn] = useState(false);
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micRef = useRef<IMicrophoneAudioTrack | null>(null);
+  const agentIdRef = useRef<string | null>(null);
 
   const cleanup = useCallback(async () => {
     try {
@@ -50,6 +51,12 @@ export default function VoiceSabatina({
       /* já fora do canal */
     }
     clientRef.current = null;
+    // desliga o agente no servidor — senão ele fica no canal até o idle_timeout
+    const agentId = agentIdRef.current;
+    agentIdRef.current = null;
+    if (agentId) {
+      void fetch(`/api/voice-session?agentId=${encodeURIComponent(agentId)}`, { method: "DELETE", keepalive: true }).catch(() => {});
+    }
     setAgentOn(false);
   }, []);
 
@@ -85,6 +92,7 @@ export default function VoiceSabatina({
         throw new Error(data.error ?? `Falha ao criar sessão (HTTP ${res.status})`);
       }
       const session = data as VoiceSession;
+      agentIdRef.current = (data as { agentId?: string }).agentId ?? null;
 
       // import dinâmico: agora-rtc-sdk-ng usa APIs de browser no escopo do módulo
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;

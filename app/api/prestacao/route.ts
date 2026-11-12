@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { pdfSafe } from "@/lib/pdfText";
 
 // Relatório de Objeto da Execução Cultural — modelo Anexo V (PNAB/Mapas Culturais,
 // Marco do Fomento Lei 14.903/2024). A prestação real é preenchida na plataforma;
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
     const line = (text: string, size = 10, font = regular, x = 60, color = ink) => {
       for (const l of wrap(text, x > 60 ? 85 : 95)) {
         if (y < 70) { page = doc.addPage([595, 842]); y = 790; }
-        page.drawText(l, { x, y, size, font, color });
+        page.drawText(pdfSafe(l), { x, y, size, font, color });
         y -= size + 5;
       }
     };
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       y -= 8;
     };
 
-    page.drawText("RELATÓRIO DE OBJETO DA EXECUÇÃO CULTURAL", { x: 60, y, size: 14, font: bold, color: accent });
+    page.drawText(pdfSafe("RELATÓRIO DE OBJETO DA EXECUÇÃO CULTURAL"), { x: 60, y, size: 14, font: bold, color: accent });
     y -= 20;
     line("(modelo Anexo V — PNAB / Mapas Culturais)", 9, regular, 60, gray);
     y -= 24;
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
     line("_______________________________", 10);
     line(`${profile.name} — proponente`, 9, regular, 60, gray);
 
-    page.drawText("Gerado pelo Manager — o coach de IA do trabalhador da arte · confira o modelo oficial do SEU edital antes de entregar", {
+    page.drawText(pdfSafe("Gerado pelo Manager — o coach de IA do trabalhador da arte · confira o modelo oficial do SEU edital antes de entregar"), {
       x: 60, y: 36, size: 7.5, font: regular, color: rgb(0.55, 0.55, 0.6),
     });
 

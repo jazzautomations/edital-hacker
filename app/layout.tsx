@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { AppNav } from "@/components/AppNav";
+import { LoginNotice } from "@/components/LoginNotice";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-100">
         <Providers>
           <AppNav />
+          <LoginNotice />
           {children}
         </Providers>
       </body>

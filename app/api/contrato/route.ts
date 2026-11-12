@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { pdfSafe } from "@/lib/pdfText";
 
 // Contrato de apresentação artística — estrutura canônica do mercado BR
 // (modelo LL Cultural/SEDEP: 10 cláusulas + checklist de negociação em anexo).
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     const line = (text: string, size = 10, font = regular, x = 60, color = ink) => {
       for (const l of wrap(text, x > 60 ? 85 : 95)) {
         if (y < 70) { page = doc.addPage([595, 842]); y = 790; }
-        page.drawText(l, { x, y, size, font, color });
+        page.drawText(pdfSafe(l), { x, y, size, font, color });
         y -= size + 5;
       }
     };
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
       y -= 6;
     };
 
-    page.drawText("CONTRATO DE PRESTAÇÃO DE SERVIÇO ARTÍSTICO", {
+    page.drawText(pdfSafe("CONTRATO DE PRESTAÇÃO DE SERVIÇO ARTÍSTICO"), {
       x: 60, y, size: 15, font: bold, color: accent,
     });
     y -= 30;
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
 
     // Anexo: checklist de negociação — nenhum modelo público traz isso.
     page = doc.addPage([595, 842]); y = 790;
-    page.drawText("ANEXO — CHECKLIST ANTES DE ASSINAR", { x: 60, y, size: 13, font: bold, color: accent });
+    page.drawText(pdfSafe("ANEXO — CHECKLIST ANTES DE ASSINAR"), { x: 60, y, size: 13, font: bold, color: accent });
     y -= 26;
     for (const item of [
       "[ ] O valor está BRUTO ou LÍQUIDO? Quem paga os impostos/retenções?",
@@ -127,7 +128,7 @@ export async function POST(req: Request) {
       y -= 4;
     }
 
-    page.drawText("Modelo gerado pelo Manager — o coach de IA do trabalhador da arte. Não substitui assessoria jurídica.", {
+    page.drawText(pdfSafe("Modelo gerado pelo Manager — o coach de IA do trabalhador da arte. Não substitui assessoria jurídica."), {
       x: 60, y: 36, size: 7.5, font: regular, color: rgb(0.55, 0.55, 0.6),
     });
 

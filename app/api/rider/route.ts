@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { pdfSafe } from "@/lib/pdfText";
 
 // Rider técnico — estrutura canônica (LL Cultural/riders reais): capa, formação,
 // MAPA DE PALCO desenhado top-down, input list, monitoração, backline, horários, camarim.
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
     const line = (text: string, size = 10, font = regular, x = 60, color = ink) => {
       for (const l of wrap(text, x > 60 ? 85 : 95)) {
         if (y < 70) { page = doc.addPage([595, 842]); y = 790; }
-        page.drawText(l, { x, y, size, font, color });
+        page.drawText(pdfSafe(l), { x, y, size, font, color });
         y -= size + 5;
       }
     };
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     };
 
     // CAPA
-    page.drawText("RIDER TÉCNICO", { x: 60, y, size: 16, font: bold, color: accent });
+    page.drawText(pdfSafe("RIDER TÉCNICO"), { x: 60, y, size: 16, font: bold, color: accent });
     y -= 22;
     line(`${profile.name} — ${rider.name}`, 13, bold);
     line(`Versão ${new Date().toLocaleDateString("pt-BR")}${profile.city ? ` · base ${profile.city}` : ""}`, 9, regular, 60, gray);
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
     page.drawRectangle({ x: mapX, y: top - mapH, width: mapW, height: mapH, borderColor: ink, borderWidth: 1.2 });
     // plateia
     page.drawLine({ start: { x: mapX - 10, y: top - mapH - 18 }, end: { x: mapX + mapW + 10, y: top - mapH - 18 }, thickness: 0.8, color: gray });
-    page.drawText("P L A T E I A", { x: mapX + mapW / 2 - 30, y: top - mapH - 32, size: 8, font: regular, color: gray });
+    page.drawText(pdfSafe("P L A T E I A"), { x: mapX + mapW / 2 - 30, y: top - mapH - 32, size: 8, font: regular, color: gray });
     // músicos: posições distribuídas — fundo bateria, laterais instrumentos, frente vozes
     const n = rider.members.length;
     rider.members.forEach((m, i) => {
@@ -94,13 +95,13 @@ export async function POST(req: Request) {
       const px = isDrum ? mapX + mapW / 2 : mapX + 60 + (i / Math.max(n - 1, 1)) * (mapW - 120);
       const py = isDrum ? top - mapH + 35 : top - 60 - (i % 2) * 25;
       page.drawCircle({ x: px, y: py, size: 11, borderColor: accent, borderWidth: 1.4 });
-      page.drawText(String(i + 1), { x: px - 2.5, y: py - 3.5, size: 8, font: bold, color: accent });
+      page.drawText(pdfSafe(String(i + 1)), { x: px - 2.5, y: py - 3.5, size: 8, font: bold, color: accent });
       const lbl = `${m.instrument}${m.vocals ? " +voz" : ""}`;
-      page.drawText(lbl.slice(0, 16), { x: px - lbl.length * 1.6, y: py + 16, size: 7, font: regular, color: ink });
+      page.drawText(pdfSafe(lbl.slice(0, 16)), { x: px - lbl.length * 1.6, y: py + 16, size: 7, font: regular, color: ink });
       // retorno de monitor na frente
       if (isVocal || i === 0) {
         page.drawRectangle({ x: px - 8, y: top - 14, width: 16, height: 8, borderColor: gray, borderWidth: 0.8 });
-        page.drawText(`M${i + 1}`, { x: px - 5, y: top - 12, size: 6, font: regular, color: gray });
+        page.drawText(pdfSafe(`M${i + 1}`), { x: px - 5, y: top - 12, size: 6, font: regular, color: gray });
       }
     });
     y = top - mapH - 48;
@@ -110,9 +111,9 @@ export async function POST(req: Request) {
     const cols = [60, 90, 260, 430];
     line("CANAL   FONTE                    MIC/DI                PEDESTAL", 8.5, bold, 60, gray);
     for (const inp of rider.inputs.sort((a, b) => a.channel - b.channel)) {
-      page.drawText(String(inp.channel), { x: cols[0], y, size: 9.5, font: regular, color: ink });
-      page.drawText(inp.source.slice(0, 28), { x: cols[1], y, size: 9.5, font: regular, color: ink });
-      page.drawText(inp.mic.slice(0, 28), { x: cols[2], y, size: 9.5, font: regular, color: ink });
+      page.drawText(pdfSafe(String(inp.channel)), { x: cols[0], y, size: 9.5, font: regular, color: ink });
+      page.drawText(pdfSafe(inp.source.slice(0, 28)), { x: cols[1], y, size: 9.5, font: regular, color: ink });
+      page.drawText(pdfSafe(inp.mic.slice(0, 28)), { x: cols[2], y, size: 9.5, font: regular, color: ink });
       y -= 15;
       if (y < 70) { page = doc.addPage([595, 842]); y = 790; }
     }
@@ -129,7 +130,7 @@ export async function POST(req: Request) {
     line(rider.hospitality ?? `Camarim com espelho e banheiro · água mineral p/ ${rider.members.length} pessoas · alimentação quente ou lanche · estacionamento próximo ao palco`, 9.5);
     if (rider.notes) { section("OBSERVAÇÕES"); line(rider.notes, 9.5); }
 
-    page.drawText(`Rider técnico — ${profile.name} · gerado pelo Manager em ${new Date().toLocaleDateString("pt-BR")}`, {
+    page.drawText(pdfSafe(`Rider técnico — ${profile.name} · gerado pelo Manager em ${new Date().toLocaleDateString("pt-BR")}`), {
       x: 60, y: 36, size: 7.5, font: regular, color: rgb(0.55, 0.55, 0.6),
     });
 

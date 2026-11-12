@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { runCoachTool } from "@/lib/coach";
+import { verifyParts } from "@/lib/sign";
 
 // Endpoint das tools do coach de VOZ: o agente Agora chama aqui com o nome da
 // tool na query (?name=prospect_leads&email=...) e os args no body JSON.
@@ -13,6 +14,10 @@ export async function POST(req: Request) {
   const email = url.searchParams.get("email") ?? "";
   if (!name || !email) {
     return NextResponse.json({ error: "name + email required" }, { status: 400 });
+  }
+
+  if (!verifyParts(url.searchParams.get("sig"), "coach-tool", name, email)) {
+    return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
   }
 
   const args = (await req.json().catch(() => ({}))) as Record<string, unknown>;

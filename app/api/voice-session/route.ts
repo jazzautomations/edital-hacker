@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { RtcRole, RtcTokenBuilder } from "agora-token";
+import { signParts } from "@/lib/sign";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { SABATINA_SYSTEM, contextBlock, type SabatinaContext } from "@/lib/llm";
@@ -18,10 +20,10 @@ import {
 const AGENT_API = "https://api.agora.io/api/conversational-ai-agent/v2/projects";
 
 function rtcToken(appId: string, cert: string | undefined, channel: string, uid: number): string {
-  // Sem certificado = projeto em modo dev/testing (tokenless). Com certificado,
-  // gerar token real requer o pacote agora-token — tratado quando a credencial chegar.
+  // Sem certificado = projeto em modo testing (tokenless).
   if (!cert) return "";
-  throw new Error("AGORA_APP_CERTIFICATE set but token generation not implemented yet");
+  // 1h de validade cobre qualquer sabatina/conversa de demo.
+  return RtcTokenBuilder.buildTokenWithUid(appId, cert, channel, uid, RtcRole.PUBLISHER, 3600, 3600);
 }
 
 export async function POST(req: Request) {
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
       type: "function",
       function: t,
       server: {
-        url: `${appUrl}/api/coach-tool?name=${encodeURIComponent(t.name)}&email=${encodeURIComponent(profileEmail)}`,
+        url: `${appUrl}/api/coach-tool?name=${encodeURIComponent(t.name)}&email=${encodeURIComponent(profileEmail)}&sig=${signParts("coach-tool", t.name, profileEmail)}`,
         method: "POST",
       },
     }));
@@ -117,7 +119,7 @@ export async function POST(req: Request) {
           },
         },
         server: {
-          url: `${appUrl}/api/voice-verdict?opp=${opportunityId}&email=${encodeURIComponent(profileEmail)}`,
+          url: `${appUrl}/api/voice-verdict?opp=${opportunityId}&email=${encodeURIComponent(profileEmail)}&sig=${signParts("voice-verdict", String(opportunityId), profileEmail)}`,
           method: "POST",
         },
       },
@@ -143,11 +145,14 @@ export async function POST(req: Request) {
         remote_rtc_uids: [String(userUid)],
         enable_string_uid: false,
         idle_timeout: 180,
-        asr: { credential_mode: "managed", params: { language: "pt-BR" } },
+        // Formato validado contra a API (nov/2026): ASR nativo só precisa do idioma;
+        // LLM e TTS "managed" exigem vendor + url (e model no TTS) da lista do plano.
+        asr: { language: "pt-BR" },
         llm: {
           credential_mode: "managed",
           vendor: "openai",
           style: "openai",
+          url: "https://api.openai.com/v1/chat/completions",
           system_messages: [{ role: "system", content: system }],
           greeting_message: greeting,
           failure_message: "Tive um problema técnico — pode repetir?",
@@ -155,7 +160,15 @@ export async function POST(req: Request) {
           params: { model: process.env.AGORA_LLM_MODEL ?? "gpt-4o-mini" },
           tools,
         },
-        tts: { credential_mode: "managed" },
+        tts: {
+          credential_mode: "managed",
+          vendor: "openai",
+          params: {
+            model: "tts-1",
+            voice: process.env.AGORA_TTS_VOICE ?? "coral",
+            url: "https://api.openai.com/v1/audio/speech",
+          },
+        },
       },
     }),
   });
@@ -173,4 +186,22 @@ export async function POST(req: Request) {
     token: rtcToken(appId, process.env.AGORA_APP_CERTIFICATE, channel, userUid),
     agentId: agent.agent_id,
   });
+}
+
+// Encerra o agente na hora (sem isso ele fica até o idle_timeout gastando crédito).
+export async function DELETE(req: Request) {
+  const appId = process.env.AGORA_APP_ID;
+  const customerId = process.env.AGORA_CUSTOMER_ID;
+  const customerSecret = process.env.AGORA_CUSTOMER_SECRET;
+  const agentId = new URL(req.url).searchParams.get("agentId") ?? "";
+  if (!appId || !customerId || !customerSecret) return NextResponse.json({ ok: false }, { status: 503 });
+  if (!/^[A-Za-z0-9]{8,64}$/.test(agentId)) return NextResponse.json({ error: "agentId inválido" }, { status: 400 });
+  const r = await fetch(`${AGENT_API}/${appId}/agents/${agentId}/leave`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${customerId}:${customerSecret}`).toString("base64")}`,
+      "Content-Type": "application/json",
+    },
+  }).catch(() => null);
+  return NextResponse.json({ ok: Boolean(r?.ok) });
 }

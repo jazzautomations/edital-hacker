@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { verifyParts } from "@/lib/sign";
 
 // Chamado pela Agora quando a banca de voz invoca a tool submit_verdict.
 // Persiste a sessão com veredito (mesmo shape da sabatina texto) e joga
@@ -11,6 +12,10 @@ export async function POST(req: Request) {
   const email = url.searchParams.get("email");
   if (!opportunityId || !email) {
     return NextResponse.json({ error: "opp + email required" }, { status: 400 });
+  }
+
+  if (!verifyParts(url.searchParams.get("sig"), "voice-verdict", opportunityId, email)) {
+    return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
   }
 
   const args = (await req.json()) as {

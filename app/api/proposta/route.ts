@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { pdfSafe } from "@/lib/pdfText";
 
 // Gera proposta/orçamento de alta conversão em PDF — o ativo que o Thiago Kiss
 // vende como bônus-estrela, produzido aqui em 1 clique a partir do lead.
@@ -22,14 +23,14 @@ export async function POST(req: Request) {
 
     let y = 790;
     const line = (text: string, size = 11, font = regular, x = 60, color = ink) => {
-      page.drawText(text, { x, y, size, font, color });
+      page.drawText(pdfSafe(text), { x, y, size, font, color });
       y -= size + 7;
     };
     const gap = (n = 10) => (y -= n);
 
-    page.drawText("PROPOSTA DE APRESENTAÇÃO ARTÍSTICA", { x: 60, y, size: 17, font: bold, color: accent });
+    page.drawText(pdfSafe("PROPOSTA DE APRESENTAÇÃO ARTÍSTICA"), { x: 60, y, size: 17, font: bold, color: accent });
     y -= 24;
-    page.drawText(`Emitida em ${new Date().toLocaleDateString("pt-BR")} · válida por 15 dias`, { x: 60, y, size: 9, font: regular, color: rgb(0.45, 0.45, 0.5) });
+    page.drawText(pdfSafe(`Emitida em ${new Date().toLocaleDateString("pt-BR")} · válida por 15 dias`), { x: 60, y, size: 9, font: regular, color: rgb(0.45, 0.45, 0.5) });
     y -= 26;
 
     line("ARTISTA", 10, bold, 60, accent);
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
 
     line("INVESTIMENTO", 10, bold, 60, accent);
     if (gig.fee) {
-      page.drawText(`R$ ${gig.fee.toLocaleString("pt-BR")}`, { x: 60, y, size: 22, font: bold, color: ink });
+      page.drawText(pdfSafe(`R$ ${gig.fee.toLocaleString("pt-BR")}`), { x: 60, y, size: 22, font: bold, color: ink });
       y -= 30;
     }
     line("Condições: 50% na assinatura da proposta, 50% até a data do evento.", 10);
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
     ]) line(t, 9, regular, 60, rgb(0.3, 0.3, 0.35));
     gap(16);
 
-    page.drawText("Gerado pelo Manager — o coach de IA do trabalhador da arte", {
+    page.drawText(pdfSafe("Gerado pelo Manager — o coach de IA do trabalhador da arte"), {
       x: 60, y: 40, size: 8, font: regular, color: rgb(0.55, 0.55, 0.6),
     });
 
