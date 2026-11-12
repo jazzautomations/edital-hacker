@@ -257,17 +257,30 @@ export async function sabatinaTurn(
   if (jsonMatch) {
     try {
       const v = JSON.parse(jsonMatch[0]);
+      // O modelo às vezes devolve número como texto, nota null ou campo a mais.
+      // Normaliza aqui pra o veredito sempre caber no formato que o banco aceita.
+      const strs = (x: unknown): string[] => (Array.isArray(x) ? x.map((i) => String(i)).filter(Boolean) : []);
+      const num = (x: unknown, max: number) => Math.max(0, Math.min(max, Math.round(Number(x) || 0)));
+      const criterionScores = Array.isArray(v.criterionScores)
+        ? v.criterionScores
+            .filter((c: any) => c && c.criterion)
+            .map((c: any) => ({
+              criterion: String(c.criterion),
+              score: num(c.score, 10),
+              ...(c.note ? { note: String(c.note) } : {}),
+            }))
+        : undefined;
       return {
-        reply: text.replace(jsonMatch[0], "").trim(),
+        reply: text.replace(jsonMatch[0], "").replace(/```(?:json)?\s*```/g, "").trim(),
         verdict: {
-          score: v.score,
-          summary: v.summary,
-          gaps: v.gaps ?? [],
-          missingDocs: v.missingDocs ?? [],
-          warnings: v.warnings ?? ["A decisão final é sempre da banca real — este parecer é uma simulação."],
-          injectionDetected: v.injectionDetected ?? false,
+          score: num(v.score, 100),
+          summary: String(v.summary ?? ""),
+          gaps: strs(v.gaps),
+          missingDocs: strs(v.missingDocs),
+          warnings: strs(v.warnings),
+          injectionDetected: Boolean(v.injectionDetected),
           documentalGate: v.documentalGate === "fail" ? "fail" : "pass",
-          criterionScores: Array.isArray(v.criterionScores) ? v.criterionScores : undefined,
+          criterionScores: criterionScores?.length ? criterionScores : undefined,
         },
       };
     } catch {}

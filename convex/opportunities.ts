@@ -28,13 +28,23 @@ export const list = query({
     const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
     const byKey = new Map<string, (typeof filtered)[number]>();
     for (const o of filtered) {
-      const key = `${norm(o.name)}|${o.registrationTo?.slice(0, 10) ?? "?"}`;
+      // Compras públicas (PNCP) repetem o título ("Edital de Chamamento nº 6/2026")
+      // em prefeituras diferentes — o id externo entra na chave pra não fundir.
+      const key = o.source === "pncp"
+        ? `pncp|${o.externalId}`
+        : `${norm(o.name)}|${o.registrationTo?.slice(0, 10) ?? "?"}`;
       const cur = byKey.get(key);
       if (!cur || (!cur.enriched && o.enriched)) byKey.set(key, o);
     }
+    // Com prazo primeiro (o que fecha antes no topo); sem prazo no fim.
     return [...byKey.values()]
-      .sort((a, b) => (a.registrationTo ?? "").localeCompare(b.registrationTo ?? ""))
-      .slice(0, args.limit ?? 100);
+      .sort((a, b) => {
+        if (!a.registrationTo !== !b.registrationTo) return a.registrationTo ? -1 : 1;
+        return (a.registrationTo ?? "").localeCompare(b.registrationTo ?? "") || b.lastSeenAt - a.lastSeenAt;
+      })
+      .slice(0, args.limit ?? 100)
+      // a lista não precisa do texto bruto do edital (pesava a página inteira)
+      .map(({ rawMarkdown: _raw, ...o }) => o);
   },
 });
 

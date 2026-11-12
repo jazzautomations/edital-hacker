@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
 import type { Opportunity, Profile } from "@/lib/types";
-import { personTypeMatches } from "@/lib/types";
 import { tidyTitle } from "@/lib/format";
+import { fitOf, prazoConfiavel, viewOf } from "@/lib/opp";
 import { SignIn } from "@/components/SignIn";
 import { Badge, Card, LinkButton, Notice, Page, SectionTitle, Skeleton, brl, dataCurta, diasAte } from "@/components/ui";
 
@@ -101,14 +101,17 @@ export default function Inicio() {
     .slice(0, 4);
 
   const inPipeline = new Set(ctx.pipeline.map((i) => i.opportunity?._id));
+  // mesmas regras do radar: área, estado e tipo de inscrição do onboarding
   const sugestoes = (opps ?? [])
     .filter((o) => !inPipeline.has(o._id))
-    .filter((o) => !o.proponentTypes?.length || personTypeMatches(profile.personType, o.proponentTypes))
-    .filter((o) => {
-      const n = diasAte(o.registrationTo);
-      return n === null || n >= 1;
+    .map((o) => {
+      const v = viewOf(o);
+      const bruto = diasAte(o.registrationTo);
+      return { o, v, dias: prazoConfiavel(bruto), fit: fitOf(o, v, profile, bruto) };
     })
-    .slice(0, 3);
+    .filter((r) => r.fit.score >= 40 && (r.dias === null || r.dias >= 2))
+    .sort((a, b) => b.fit.score - a.fit.score)
+    .slice(0, 4);
 
   const steps = [
     { done: true, title: "Montar teu perfil", href: "/comecar", cta: "" },
@@ -211,7 +214,7 @@ export default function Inicio() {
 
           <Card as="section">
             <SectionTitle aside={<Link href="/oportunidades" className="text-sm text-emerald-300 hover:underline">Ver radar</Link>}>
-              {prazos.length ? "Prazos correndo" : "No radar pra você"}
+              {prazos.length ? "Prazos correndo" : "Combinam com teu perfil"}
             </SectionTitle>
             {prazos.length > 0 ? (
               <ul className="flex flex-col divide-y divide-neutral-800">
@@ -231,18 +234,17 @@ export default function Inicio() {
               <Skeleton className="h-32" />
             ) : sugestoes.length > 0 ? (
               <ul className="flex flex-col divide-y divide-neutral-800">
-                {sugestoes.map((o) => {
-                  const dias = diasAte(o.registrationTo);
-                  return (
-                    <li key={o._id} className="flex items-center justify-between gap-3 py-3">
-                      <Link href={`/sabatina/${o._id}`} className="min-w-0 flex-1 hover:text-emerald-300">
-                        <p className="truncate font-medium text-neutral-100">{tidyTitle(o.name)}</p>
-                        <p className="text-xs text-neutral-500">{o.sourceName}</p>
-                      </Link>
-                      {dias !== null && <Badge tone={dias <= 3 ? "bad" : dias <= 10 ? "warn" : "neutral"}>{dias === 1 ? "fecha amanhã" : `${dias} dias`}</Badge>}
-                    </li>
-                  );
-                })}
+                {sugestoes.map(({ o, v, dias, fit }) => (
+                  <li key={o._id} className="flex items-center justify-between gap-3 py-3">
+                    <Link href={`/sabatina/${o._id}`} className="min-w-0 flex-1 hover:text-emerald-300">
+                      <p className="truncate font-medium text-neutral-100">{v.title}</p>
+                      <p className="truncate text-xs text-neutral-500">
+                        {fit.reasons.filter((r) => r.tone === "good").map((r) => r.text).join(" · ") || v.publisher}
+                      </p>
+                    </Link>
+                    {dias !== null && <Badge tone={dias <= 3 ? "bad" : dias <= 10 ? "warn" : "neutral"}>{dias === 1 ? "fecha amanhã" : `${dias} dias`}</Badge>}
+                  </li>
+                ))}
               </ul>
             ) : (
               <p className="text-sm text-neutral-400">Nenhum edital aberto que aceite teu perfil agora. O radar roda todo dia.</p>

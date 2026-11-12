@@ -9,6 +9,7 @@ import { calcCachet } from "@/lib/cachet";
 import { ruleFor } from "@/lib/docRules";
 import { useAuthEmail } from "@/lib/useAuth";
 import { SignIn } from "@/components/SignIn";
+import { Badge, Button, Card, EmptyState, Field, Input, LinkButton, Page, PageHeader, SectionTitle, Skeleton, Textarea, brl, dataCurta } from "@/components/ui";
 
 const NEXT: Record<string, string> = { marcado: "feito", feito: "pago" };
 const STYLE: Record<string, string> = {
@@ -51,6 +52,7 @@ export default function Agenda() {
   const [form, setForm] = useState({ title: "", venue: "", date: "", fee: "" });
   const [calc, setCalc] = useState({ musicians: "3", pay: "400", km: "100", tech: "0", lodge: "0", extra: "0" });
   const [showCalc, setShowCalc] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [roteiro, setRoteiro] = useState<{ gig: Gig; setlist: string; promotor: string; cnpj: string; busy: boolean } | null>(null);
 
   // O roteiro ECAD é o doc que impede a verba do show de ir pra outros autores.
@@ -129,279 +131,272 @@ export default function Agenda() {
     (l) => ["novo", "contatado", "respondeu"].includes(l.status) && l.updatedAt < Date.now() - 5 * 86400000
   );
 
-  return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl sm:text-5xl text-neutral-50">Agenda & cachês</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            Shows, aulas e trabalhos — o coach controla data, valor e o que já pingou.
-          </p>
-        </div>
-        <div className="flex gap-4 text-sm">
-          <a href={`/epk?email=${encodeURIComponent(profile.email)}`} target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">EPK ↗</a>
-          <Link href="/prospeccao" className="text-emerald-400 hover:underline">Prospecção →</Link>
-          <Link href="/pipeline" className="text-emerald-400 hover:underline">Pipeline →</Link>
-        </div>
-      </header>
+  const upcoming = sorted.filter((g) => g.date >= today && g.status !== "cancelado");
+  const past = sorted.filter((g) => g.date < today || g.status === "cancelado").reverse();
+  const atrasado = overdue.reduce((s, g) => s + (g.fee ?? 0), 0);
 
-      {(weekGigs.length > 0 || overdue.length > 0 || staleLeads.length > 0 || (expiring?.length ?? 0) > 0) && (
-        <section className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
-          <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-emerald-400">
-            ⚡ O coach olhou tua semana
-          </h2>
-          <ul className="flex flex-col gap-2 text-sm text-neutral-300">
-            {weekGigs.map((g) => (
-              <li key={g._id}>🎤 <b>{g.date}</b> — {g.title}{g.venue ? ` · ${g.venue}` : ""}{g.fee ? ` · R$ ${g.fee.toLocaleString("pt-BR")}` : ""}</li>
-            ))}
+  const STATUS: Record<string, { label: string; tone: "info" | "warn" | "good" | "neutral" }> = {
+    marcado: { label: "marcado", tone: "info" },
+    feito: { label: "feito, falta receber", tone: "warn" },
+    pago: { label: "pago", tone: "good" },
+    cancelado: { label: "cancelado", tone: "neutral" },
+  };
+
+  const gigRow = (g: Gig) => {
+    const [, mm, dd] = g.date.split("-");
+    const mes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(mm) - 1] ?? "";
+    const late = g.date < today && g.status !== "pago" && g.status !== "cancelado" && g.fee;
+    const st = STATUS[g.status] ?? STATUS.marcado;
+    const cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(g.title)}&dates=${g.date.replaceAll("-", "")}/${g.date.replaceAll("-", "")}${g.venue ? `&location=${encodeURIComponent(g.venue)}` : ""}&details=${encodeURIComponent(`Marcado via Manager${g.fee ? ` · cachê R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`)}`;
+    return (
+      <li key={g._id} className={`rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 ${g.status === "cancelado" ? "opacity-50" : ""}`}>
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-neutral-800 leading-none">
+            <span className="font-display text-2xl text-neutral-50">{dd}</span>
+            <span className="mt-0.5 text-[11px] uppercase tracking-wide text-neutral-400">{mes}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 className="font-semibold text-neutral-50">{g.title}</h3>
+              <Badge tone={late ? "bad" : st.tone}>{late ? "cachê atrasado" : st.label}</Badge>
+            </div>
+            <p className="mt-0.5 text-sm text-neutral-400">
+              {[g.venue, g.fee ? brl(g.fee) : null].filter(Boolean).join(" · ") || "sem local e valor"}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {NEXT[g.status] && (
+                <Button size="sm" variant={g.status === "feito" ? "primary" : "secondary"} onClick={() => setStatus({ id: g._id as any, status: NEXT[g.status] })}>
+                  {g.status === "marcado" ? "Marcar como feito" : "Recebi o cachê"}
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setRoteiro({ gig: g, setlist: "", promotor: "", cnpj: "", busy: false })}>
+                Roteiro ECAD
+              </Button>
+              <details className="relative ml-auto">
+                <summary className="flex h-8 cursor-pointer list-none items-center rounded-full px-3 text-xs font-medium text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 [&::-webkit-details-marker]:hidden">
+                  Mais
+                </summary>
+                <div className="absolute right-0 top-9 z-10 flex w-52 flex-col rounded-2xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-2xl shadow-black/50">
+                  <a href={cal} target="_blank" rel="noreferrer" className="rounded-xl px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
+                    Pôr no Google Agenda
+                  </a>
+                  {g.status !== "cancelado" && g.status !== "pago" && (
+                    <button onClick={() => setStatus({ id: g._id as any, status: "cancelado" })} className="rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800">
+                      Cancelar trabalho
+                    </button>
+                  )}
+                  {confirmDel === g._id ? (
+                    <button onClick={async () => { await remove({ id: g._id as any }); setConfirmDel(null); }} className="rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-300 hover:bg-red-500/10">
+                      Confirmar: apagar de vez
+                    </button>
+                  ) : (
+                    <button onClick={() => setConfirmDel(g._id)} className="rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800">
+                      Apagar
+                    </button>
+                  )}
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </li>
+    );
+  };
+
+  const hasBrief = weekGigs.length > 0 || overdue.length > 0 || staleLeads.length > 0 || (expiring?.length ?? 0) > 0;
+
+  return (
+    <Page width="max-w-4xl">
+      <PageHeader
+        title="Agenda e cachês"
+        description="Cada trabalho com data, valor e situação do pagamento. Você sabe quanto entra antes de o mês começar."
+        actions={<LinkButton href={`/epk?email=${encodeURIComponent(profile.email)}`} variant="secondary" external>Ver meu press kit</LinkButton>}
+      />
+
+      <section className="mb-6 grid grid-cols-3 gap-3" aria-label="Resumo financeiro">
+        {[
+          { label: "A receber", value: brl(aReceber), tone: "text-neutral-50" },
+          { label: "Recebido", value: brl(recebido), tone: "text-emerald-300" },
+          { label: "Atrasado", value: brl(atrasado), tone: atrasado ? "text-red-300" : "text-neutral-500" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 sm:p-5">
+            <p className="text-xs text-neutral-400 sm:text-sm">{t.label}</p>
+            <p className={`mt-1.5 font-display text-2xl leading-none sm:text-4xl ${t.tone}`}>{t.value}</p>
+          </div>
+        ))}
+      </section>
+
+      {hasBrief && (
+        <Card as="section" className="mb-6 border-emerald-500/30">
+          <SectionTitle>Tua semana</SectionTitle>
+          <ul className="flex flex-col gap-2.5 text-sm leading-relaxed text-neutral-200">
             {overdue.map((g) => (
-              <li key={g._id} className="text-amber-400">💸 {g.title} foi dia {g.date} e R$ {g.fee?.toLocaleString("pt-BR")} ainda não tá como pago — cobra.</li>
+              <li key={g._id} className="flex gap-2.5">
+                <Badge tone="bad">cobrar</Badge>
+                <span><b>{g.title}</b> foi em {dataCurta(g.date)} e os {brl(g.fee ?? 0)} ainda não entraram.</span>
+              </li>
             ))}
             {(expiring ?? []).map((d) => {
               const rule = ruleFor(`${d.name} ${(d as any).kind ?? ""}`);
               return (
-                <li key={d._id} className="text-red-400">
-                  📄 {d.name} vence {d.expiresAt?.slice(0, 10)}
-                  {rule && <span className="text-neutral-400"> — {rule.hint}</span>}
-                  {rule?.emitUrl && (
-                    <> <a href={rule.emitUrl} target="_blank" rel="noreferrer" className="text-emerald-400 underline">emitir →</a></>
-                  )}
+                <li key={d._id} className="flex gap-2.5">
+                  <Badge tone="warn">documento</Badge>
+                  <span>
+                    <b>{d.name}</b> vence em {dataCurta(d.expiresAt)}.{rule ? ` ${rule.hint}` : ""}{" "}
+                    {rule?.emitUrl ? (
+                      <a href={rule.emitUrl} target="_blank" rel="noreferrer" className="text-emerald-300 underline underline-offset-2">Emitir nova</a>
+                    ) : (
+                      <Link href="/documentos" className="text-emerald-300 underline underline-offset-2">Abrir documentos</Link>
+                    )}
+                  </span>
                 </li>
               );
             })}
+            {weekGigs.map((g) => (
+              <li key={g._id} className="flex gap-2.5">
+                <Badge tone="info">{dataCurta(g.date)}</Badge>
+                <span><b>{g.title}</b>{g.venue ? ` em ${g.venue}` : ""}{g.fee ? `, ${brl(g.fee)}` : ""}.</span>
+              </li>
+            ))}
             {staleLeads.slice(0, 3).map((l) => (
-              <li key={l._id}>📞 {l.name} ({l.status}) parado há {Math.floor((Date.now() - l.updatedAt) / 86400000)}d — follow-up.</li>
+              <li key={l._id} className="flex gap-2.5">
+                <Badge>retomar</Badge>
+                <span><b>{l.name}</b> está sem resposta há {Math.floor((Date.now() - l.updatedAt) / 86400000)} dias. <Link href="/prospeccao" className="text-emerald-300 underline underline-offset-2">Fazer follow-up</Link></span>
+              </li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
 
-      <section className="mb-8 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-neutral-800 p-4 text-center">
-          <p className="text-2xl font-bold text-amber-400">
-            R$ {aReceber.toLocaleString("pt-BR")}
-          </p>
-          <p className="text-xs text-neutral-500">a receber</p>
-        </div>
-        <div className="rounded-2xl border border-neutral-800 p-4 text-center">
-          <p className="text-2xl font-bold text-emerald-400">
-            R$ {recebido.toLocaleString("pt-BR")}
-          </p>
-          <p className="text-xs text-neutral-500">recebido</p>
-        </div>
-      </section>
-
-      <section className="mb-4 rounded-2xl border border-neutral-800 p-5">
-        <button
-          onClick={() => setShowCalc(!showCalc)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <span className="text-sm font-semibold text-emerald-400">
-            💰 Não chute seu cachê — calcula o piso
-          </span>
-          <span className="font-mono text-xs text-neutral-500">{showCalc ? "−" : "+"}</span>
-        </button>
-        {showCalc && (
-          <div className="mt-4">
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
-              {[
-                ["músicos", "musicians"], ["R$/músico", "pay"], ["km total", "km"],
-                ["som/técnico", "tech"], ["hospedagem", "lodge"], ["extras", "extra"],
-              ].map(([label, key]) => (
-                <label key={key} className="flex flex-col gap-1">
-                  <span className="font-mono text-[10px] uppercase text-neutral-500">{label}</span>
-                  <input
-                    className="rounded-lg bg-neutral-900 px-3 py-2 text-sm"
-                    inputMode="numeric"
-                    value={calc[key as keyof typeof calc]}
-                    onChange={(e) => setCalc({ ...calc, [key]: e.target.value.replace(/[^\d.]/g, "") })}
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-4">
-              <div>
-                <p className="font-mono text-[10px] uppercase text-neutral-500">piso (custa isso)</p>
-                <p className="text-xl font-bold text-red-400">R$ {cachet.floor.toLocaleString("pt-BR")}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] uppercase text-neutral-500">pede isso</p>
-                <p className="text-xl font-bold text-emerald-400">R$ {cachet.suggested.toLocaleString("pt-BR")}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] uppercase text-neutral-500">teto da faixa</p>
-                <p className="text-xl font-bold text-neutral-300">R$ {cachet.ceiling.toLocaleString("pt-BR")}</p>
-              </div>
-              <p className="text-xs text-neutral-500">
-                ≈ R$ {cachet.perMusician.toLocaleString("pt-BR")} por músico · abaixo do piso você paga pra tocar
-              </p>
-              <button
-                onClick={() => setForm({ ...form, fee: String(cachet.suggested) })}
-                className="ml-auto rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-black"
-              >
-                usar R$ {cachet.suggested.toLocaleString("pt-BR")} ↓
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="mb-8 rounded-2xl border border-neutral-800 p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="o que é (show, aula, gravação)"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="local/contratante"
-            value={form.venue}
-            onChange={(e) => setForm({ ...form, venue: e.target.value })}
-          />
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-          />
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="cachê R$"
-            inputMode="numeric"
-            value={form.fee}
-            onChange={(e) => setForm({ ...form, fee: e.target.value.replace(/[^\d.,]/g, "") })}
-          />
-        </div>
-        <button
-          className="mt-3 rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-40"
-          disabled={!form.title || !form.date}
-          onClick={async () => {
+      <Card as="section" className="mb-8">
+        <SectionTitle>Marcar trabalho</SectionTitle>
+        <form
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_1.2fr_1fr_0.9fr]"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!form.title.trim() || !form.date) return;
             await add({
               profileId: profile._id as any,
-              title: form.title,
+              title: form.title.trim(),
               venue: form.venue || undefined,
               date: form.date,
-              fee: form.fee ? Number(form.fee.replace(",", ".")) : undefined,
+              fee: form.fee ? Number(form.fee.replace(/\./g, "").replace(",", ".")) : undefined,
             });
             setForm({ title: "", venue: "", date: "", fee: "" });
           }}
         >
-          + marcar
-        </button>
-      </section>
+          <Field label="O que é">
+            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Show, aula, gravação" />
+          </Field>
+          <Field label="Onde ou pra quem">
+            <Input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} placeholder="Bar do Zé" />
+          </Field>
+          <Field label="Data">
+            <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </Field>
+          <Field label="Cachê (R$)">
+            <Input inputMode="decimal" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value.replace(/[^\d.,]/g, "") })} placeholder="1.500" />
+          </Field>
+          <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
+            <Button type="submit" disabled={!form.title.trim() || !form.date}>Marcar na agenda</Button>
+            <Button type="button" variant="ghost" onClick={() => setShowCalc(!showCalc)} aria-expanded={showCalc}>
+              {showCalc ? "Fechar calculadora" : "Não sei quanto cobrar"}
+            </Button>
+          </div>
+        </form>
 
-      {sorted.length === 0 ? (
-        <p className="text-sm text-neutral-500">
-          Agenda vazia. Marca um trampo ou fecha um lead na prospecção — ele vira gig aqui.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {sorted.map((g) => (
-            <article
-              key={g._id}
-              className={`flex items-center justify-between gap-4 rounded-2xl border border-neutral-800 p-4 ${g.status === "cancelado" ? "opacity-40" : ""}`}
-            >
+        {showCalc && (
+          <div className="mt-5 border-t border-neutral-800 pt-5">
+            <p className="mb-3 text-sm text-neutral-400">Soma teus custos e a gente te dá o piso. Abaixo dele você paga pra tocar.</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                ["Músicos", "musicians"], ["R$ por músico", "pay"], ["Km total", "km"],
+                ["Som e técnico", "tech"], ["Hospedagem", "lodge"], ["Outros", "extra"],
+              ].map(([label, key]) => (
+                <Field key={key} label={label}>
+                  <Input inputMode="numeric" value={calc[key as keyof typeof calc]} onChange={(e) => setCalc({ ...calc, [key]: e.target.value.replace(/[^\d.]/g, "") })} />
+                </Field>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap items-end gap-x-8 gap-y-3">
               <div>
-                <h3 className="font-semibold">{g.title}</h3>
-                <p className="font-mono text-xs text-neutral-500">
-                  {g.date} {g.venue ? `· ${g.venue}` : ""}
-                  {g.fee ? ` · R$ ${g.fee.toLocaleString("pt-BR")}` : ""}
-                </p>
+                <p className="text-xs text-neutral-500">Piso (teu custo)</p>
+                <p className="font-display text-3xl text-red-300">{brl(cachet.floor)}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(g.title)}&dates=${g.date.replaceAll("-", "")}/${g.date.replaceAll("-", "")}${g.venue ? `&location=${encodeURIComponent(g.venue)}` : ""}&details=${encodeURIComponent(`Marcado via Manager${g.fee ? ` · cachê R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-sky-400 hover:bg-neutral-700"
-                  title="Adicionar ao Google Calendar"
-                >
-                  📅 cal
-                </a>
-                <button
-                  onClick={() => setRoteiro({ gig: g, setlist: "", promotor: "", cnpj: "", busy: false })}
-                  className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-emerald-400 hover:bg-neutral-700"
-                  title="Gerar roteiro musical ECAD (.xlsx) — sem ele a verba do show vai pro rateio e paga outros autores"
-                >
-                  📄 ecad
-                </button>
-                <span className={`font-mono text-xs uppercase ${STYLE[g.status]}`}>{g.status}</span>
-                {NEXT[g.status] && (
-                  <button
-                    onClick={() => setStatus({ id: g._id as any, status: NEXT[g.status] })}
-                    className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
-                  >
-                    → {NEXT[g.status]}
-                  </button>
-                )}
-                {g.status !== "cancelado" && g.status !== "pago" && (
-                  <button
-                    onClick={() => setStatus({ id: g._id as any, status: "cancelado" })}
-                    className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-500"
-                  >
-                    ✕
-                  </button>
-                )}
-                <button
-                  onClick={() => remove({ id: g._id as any })}
-                  className="rounded-lg px-2 py-1.5 text-xs text-neutral-600 hover:text-red-400"
-                >
-                  rm
-                </button>
+              <div>
+                <p className="text-xs text-neutral-500">Pede isso</p>
+                <p className="font-display text-3xl text-emerald-300">{brl(cachet.suggested)}</p>
               </div>
-            </article>
-          ))}
+              <div>
+                <p className="text-xs text-neutral-500">Teto da faixa</p>
+                <p className="font-display text-3xl text-neutral-300">{brl(cachet.ceiling)}</p>
+              </div>
+              <p className="pb-1 text-xs text-neutral-500">cerca de {brl(cachet.perMusician)} por músico</p>
+              <Button type="button" size="sm" variant="secondary" className="ml-auto" onClick={() => setForm({ ...form, fee: String(cachet.suggested) })}>
+                Usar {brl(cachet.suggested)}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {gigs === undefined ? (
+        <div className="flex flex-col gap-3"><Skeleton className="h-24" /><Skeleton className="h-24" /></div>
+      ) : sorted.length === 0 ? (
+        <EmptyState icon="🎤" title="Nada na agenda ainda" action={<LinkButton href="/prospeccao" variant="secondary">Caçar quem contrata</LinkButton>}>
+          Marca teu próximo trabalho no formulário acima, ou fecha um lead na prospecção que ele vem pra cá sozinho.
+        </EmptyState>
+      ) : (
+        <div className="flex flex-col gap-8">
+          {upcoming.length > 0 && (
+            <section>
+              <SectionTitle>Próximos</SectionTitle>
+              <ul className="flex flex-col gap-3">{upcoming.map(gigRow)}</ul>
+            </section>
+          )}
+          {past.length > 0 && (
+            <section>
+              <SectionTitle>Já passou</SectionTitle>
+              <ul className="flex flex-col gap-3">{past.map(gigRow)}</ul>
+            </section>
+          )}
         </div>
       )}
 
       {roteiro && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-700 bg-neutral-950 p-5">
-            <h3 className="font-bold">📄 Roteiro musical ECAD</h3>
-            <p className="mt-1 text-xs text-neutral-400">
-              {roteiro.gig.title} · {roteiro.gig.date} — sem roteiro, a verba do show (que o promotor já paga) vai pro rateio e paga outros autores.
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="roteiro-titulo"
+          onKeyDown={(e) => e.key === "Escape" && setRoteiro(null)}
+          onClick={(e) => e.target === e.currentTarget && setRoteiro(null)}
+        >
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-neutral-700 bg-neutral-950 p-5 sm:rounded-3xl sm:p-6">
+            <h3 id="roteiro-titulo" className="text-xl font-semibold text-neutral-50">Roteiro musical do ECAD</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-neutral-400">
+              {roteiro.gig.title}, {dataCurta(roteiro.gig.date, true)}. Sem o roteiro, o direito autoral do show vai pro rateio geral e paga outros autores.
             </p>
-            <input
-              className="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm"
-              placeholder="promotor (quem licencia junto ao ECAD)"
-              value={roteiro.promotor}
-              onChange={(e) => setRoteiro({ ...roteiro, promotor: e.target.value })}
-            />
-            <input
-              className="mt-2 w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm"
-              placeholder="CNPJ/CPF do promotor (opcional)"
-              value={roteiro.cnpj}
-              onChange={(e) => setRoteiro({ ...roteiro, cnpj: e.target.value })}
-            />
-            <textarea
-              className="mt-2 h-40 w-full rounded-xl bg-neutral-900 px-4 py-3 font-mono text-sm"
-              placeholder={"Setlist — uma música por linha:\nNome da música — Autores\nEvidências — José Augusto / Paulo Valle"}
-              value={roteiro.setlist}
-              onChange={(e) => setRoteiro({ ...roteiro, setlist: e.target.value })}
-            />
-            <p className="mt-1 text-[10px] text-neutral-600">
-              máx 31 músicas por formulário · prazo: até 48h úteis pós-show (licenças &lt; R$500)
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={gerarRoteiro}
-                disabled={roteiro.busy || !roteiro.setlist.trim()}
-                className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black disabled:opacity-40"
-              >
-                {roteiro.busy ? "Gerando…" : "Baixar .xlsx"}
-              </button>
-              <button
-                onClick={() => setRoteiro(null)}
-                className="rounded-xl border border-neutral-700 px-4 py-3 text-sm"
-              >
-                Fechar
-              </button>
+            <div className="mt-4 flex flex-col gap-3">
+              <Field label="Promotor" hint="Quem licencia o evento no ECAD (a casa ou o produtor).">
+                <Input autoFocus value={roteiro.promotor} onChange={(e) => setRoteiro({ ...roteiro, promotor: e.target.value })} />
+              </Field>
+              <Field label="CNPJ ou CPF do promotor" hint="Opcional.">
+                <Input value={roteiro.cnpj} onChange={(e) => setRoteiro({ ...roteiro, cnpj: e.target.value })} />
+              </Field>
+              <Field label="Setlist" hint="Uma música por linha, no formato: Nome da música - Autores. Até 31 músicas.">
+                <Textarea className="h-40 font-mono" placeholder={"Evidências - José Augusto / Paulo Valle\nMinha autoral - Teu nome"} value={roteiro.setlist} onChange={(e) => setRoteiro({ ...roteiro, setlist: e.target.value })} />
+              </Field>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <Button className="flex-1" size="lg" onClick={gerarRoteiro} loading={roteiro.busy} disabled={!roteiro.setlist.trim()}>
+                Baixar planilha
+              </Button>
+              <Button size="lg" variant="secondary" onClick={() => setRoteiro(null)}>Fechar</Button>
             </div>
           </div>
         </div>
       )}
-    </main>
+    </Page>
   );
 }

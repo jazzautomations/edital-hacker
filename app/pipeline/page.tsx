@@ -1,20 +1,16 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useState } from "react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { PipelineItem, Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { tidyTitle } from "@/lib/format";
 import { SignIn } from "@/components/SignIn";
+import { Badge, Button, Card, EmptyState, Field, Input, LinkButton, Page, PageHeader, SectionTitle, Skeleton, brl, diasAte } from "@/components/ui";
 
-interface Doc {
-  _id: string;
-  name: string;
-  kind: string;
-  expiresAt?: string;
-}
 interface Contact {
   _id: string;
   name: string;
@@ -23,46 +19,28 @@ interface Contact {
   email?: string;
 }
 
-const STAGES: { key: string; label: string }[] = [
-  { key: "descoberta", label: "Descoberta" },
-  { key: "interessado", label: "Interessado" },
-  { key: "inscrito", label: "Inscrito" },
-  { key: "ganho", label: "Ganho" },
-  { key: "execucao", label: "Em execução" },
-  { key: "prestacao", label: "Prestação de contas" },
-  { key: "arquivado", label: "Arquivado" },
+// Cada etapa diz o que fazer nela — o funil ensina o caminho do edital.
+const STAGES: { key: string; label: string; hint: string }[] = [
+  { key: "descoberta", label: "Descoberta", hint: "Achei, ainda vou ler" },
+  { key: "interessado", label: "Vou inscrever", hint: "Preparando proposta e documentos" },
+  { key: "inscrito", label: "Inscrito", hint: "Aguardando resultado" },
+  { key: "ganho", label: "Aprovado", hint: "Assinar termo e receber" },
+  { key: "execucao", label: "Em execução", hint: "Projeto rodando" },
+  { key: "prestacao", label: "Prestação de contas", hint: "Relatório e comprovantes" },
 ];
+const ALL = [...STAGES, { key: "arquivado", label: "Arquivado", hint: "" }];
 
 export default function Pipeline() {
   const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const [creating, setCreating] = useState(false);
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
-    | Profile
-    | null
-    | undefined;
-  const upsertProfile = useMutation(api.profiles.upsert);
-  const items = useQuery(
-    api.pipeline.listForProfile,
-    profile ? { profileId: profile._id as any } : "skip"
-  ) as PipelineItem[] | undefined;
+  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const items = useQuery(api.pipeline.listForProfile, profile ? { profileId: profile._id as any } : "skip") as PipelineItem[] | undefined;
+  const contacts = useQuery(api.contacts.listForProfile, profile ? { profileId: profile._id as any } : "skip") as Contact[] | undefined;
   const move = useMutation(api.pipeline.move);
-  const docs = useQuery(
-    api.documents.listForProfile,
-    profile ? { profileId: profile._id as any } : "skip"
-  ) as Doc[] | undefined;
-  const contacts = useQuery(
-    api.contacts.listForProfile,
-    profile ? { profileId: profile._id as any } : "skip"
-  ) as Contact[] | undefined;
-  const addDoc = useMutation(api.documents.add);
+  const remove = useMutation(api.pipeline.remove);
   const addContact = useMutation(api.contacts.add);
-  const [docForm, setDocForm] = useState({ name: "", kind: "certidão", expiresAt: "" });
   const [contactForm, setContactForm] = useState({ name: "", role: "", org: "" });
-
-  function daysUntil(iso?: string) {
-    if (!iso) return null;
-    return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
-  }
+  const [showArchived, setShowArchived] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
 
   if (!profile) {
     return (
@@ -79,179 +57,177 @@ export default function Pipeline() {
     );
   }
 
+  const live = (items ?? []).filter((i) => i.stage !== "arquivado");
+  const archived = (items ?? []).filter((i) => i.stage === "arquivado");
+  const emJogo = live
+    .filter((i) => ["interessado", "inscrito"].includes(i.stage))
+    .reduce((s, i) => s + (i.opportunity?.totalResource ?? 0), 0);
+
+  const card = (i: PipelineItem) => {
+    const o = i.opportunity!;
+    const dias = diasAte(o.registrationTo);
+    const prazoVale = ["descoberta", "interessado"].includes(i.stage) && dias !== null;
+    return (
+      <li key={i._id} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-3.5">
+        <Link href={`/sabatina/${o._id}`} className="block text-sm font-semibold leading-snug text-neutral-50 hover:text-emerald-300">
+          <span className="line-clamp-3">{tidyTitle(o.name)}</span>
+        </Link>
+        <p className="mt-1 truncate text-xs text-neutral-500">{o.sourceName}</p>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {prazoVale && (
+            <Badge tone={dias! < 0 ? "neutral" : dias! <= 3 ? "bad" : dias! <= 10 ? "warn" : "neutral"}>
+              {dias! < 0 ? "inscrição encerrada" : dias === 0 ? "fecha hoje" : dias === 1 ? "fecha amanhã" : `${dias} dias`}
+            </Badge>
+          )}
+          {i.sabatinaScore != null && (
+            <Badge tone={i.sabatinaScore >= 70 ? "good" : i.sabatinaScore >= 50 ? "warn" : "bad"}>banca {i.sabatinaScore}/100</Badge>
+          )}
+          {o.totalResource ? <Badge>{brl(o.totalResource)}</Badge> : null}
+        </div>
+        {i.sabatinaScore == null && ["descoberta", "interessado"].includes(i.stage) && (
+          <Link href={`/sabatina/${o._id}`} className="mt-2.5 inline-block text-xs font-semibold text-emerald-300 hover:underline">
+            Testar na banca antes de inscrever
+          </Link>
+        )}
+        {i.stage === "prestacao" && (
+          <Link href="/prestacao" className="mt-2.5 inline-block text-xs font-semibold text-emerald-300 hover:underline">
+            Montar relatório de execução
+          </Link>
+        )}
+        <div className="mt-3 flex items-center gap-2 border-t border-neutral-800 pt-3">
+          <label className="sr-only" htmlFor={`st-${i._id}`}>Etapa de {o.name}</label>
+          <select
+            id={`st-${i._id}`}
+            className="h-8 min-w-0 flex-1 rounded-lg bg-neutral-950 px-2 text-xs"
+            value={i.stage}
+            onChange={(e) => move({ id: i._id as Id<"pipelineItems">, stage: e.target.value })}
+          >
+            {ALL.map((x) => (
+              <option key={x.key} value={x.key}>
+                {x.label}
+              </option>
+            ))}
+          </select>
+          {confirmDel === i._id ? (
+            <>
+              <Button size="sm" variant="danger" onClick={async () => { await remove({ id: i._id as Id<"pipelineItems"> }); setConfirmDel(null); }}>
+                Tirar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDel(null)}>
+                Não
+              </Button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmDel(i._id)} aria-label={`Tirar ${o.name} do pipeline`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200">
+              ✕
+            </button>
+          )}
+        </div>
+      </li>
+    );
+  };
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl sm:text-5xl text-neutral-50">Pipeline de {profile.name}</h1>
-        </div>
-        <div className="flex gap-4 text-sm">
-          <Link href="/prestacao" className="text-amber-400 hover:underline">
-            Prestação →
-          </Link>
-          <Link href="/oportunidades" className="text-emerald-400 hover:underline">
-            + Oportunidades
-          </Link>
-        </div>
-      </header>
+    <Page width="max-w-7xl">
+      <PageHeader
+        title="Teu pipeline"
+        description={
+          live.length
+            ? `${live.length} ${live.length === 1 ? "edital" : "editais"} em andamento${emJogo ? ` · ${brl(emJogo)} em disputa` : ""}.`
+            : "Do edital que você achou até a prestação de contas, cada um na sua etapa."
+        }
+        actions={
+          <>
+            <LinkButton href="/documentos" variant="secondary">Documentos</LinkButton>
+            <LinkButton href="/oportunidades">Adicionar edital</LinkButton>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7">
-        {STAGES.map((s) => (
-          <div key={s.key} className="rounded-2xl border border-neutral-800 p-3">
-            <h2 className="mb-3 font-mono text-xs uppercase tracking-wider text-neutral-400">
-              {s.label}
-            </h2>
-            <div className="flex flex-col gap-2">
-              {!items ? (
-                <p className="text-xs text-neutral-600">…</p>
-              ) : (
-                items
-                  .filter((i) => i.stage === s.key)
-                  .map((i) => (
-                    <div
-                      key={i._id}
-                      className="rounded-xl bg-neutral-900 p-3 text-sm"
-                    >
-                      <p className="font-medium leading-snug">
-                        {i.opportunity!.name}
-                      </p>
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {i.opportunity!.sourceName}
-                      </p>
-                      {i.sabatinaScore != null && (
-                        <p className="mt-1 text-xs font-bold text-emerald-400">
-                          Banca: {i.sabatinaScore}/100
-                        </p>
-                      )}
-                      <select
-                        className="mt-2 w-full rounded bg-neutral-800 px-1 py-1 text-xs"
-                        value={i.stage}
-                        onChange={(e) =>
-                          move({ id: i._id as Id<"pipelineItems">, stage: e.target.value })
-                        }
-                      >
-                        {STAGES.map((x) => (
-                          <option key={x.key} value={x.key}>
-                            {x.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <section className="rounded-2xl border border-neutral-800 p-5">
-          <h2 className="mb-4 font-mono text-xs uppercase tracking-wider text-neutral-400">
-            Documentos
-          </h2>
-          <ul className="mb-4 flex flex-col gap-2">
-            {(docs ?? []).map((d) => {
-              const days = daysUntil(d.expiresAt);
+      {items === undefined ? (
+        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {STAGES.map((s) => <Skeleton key={s.key} className="h-48" />)}
+        </div>
+      ) : live.length === 0 && archived.length === 0 ? (
+        <EmptyState icon="🧭" title="Teu pipeline está vazio" action={<LinkButton href="/oportunidades">Abrir o radar de editais</LinkButton>}>
+          Escolhe no radar os editais que fazem sentido e clica em “+ pipeline”. Eles aparecem aqui, com prazo e nota da banca.
+        </EmptyState>
+      ) : (
+        <div className="no-scrollbar -mx-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
+          <div className="grid min-w-[72rem] grid-cols-6 gap-3 xl:min-w-0">
+            {STAGES.map((s) => {
+              const col = live.filter((i) => i.stage === s.key);
               return (
-                <li
-                  key={d._id}
-                  className="flex items-center justify-between rounded-xl bg-neutral-900 px-3 py-2 text-sm"
-                >
-                  <span>
-                    {d.name} <span className="text-neutral-500">· {d.kind}</span>
-                  </span>
-                  {days !== null && (
-                    <span
-                      className={`text-xs ${days <= 30 ? "text-red-400" : "text-neutral-500"}`}
-                    >
-                      {days <= 0 ? "vencido" : `vence em ${days}d`}
-                    </span>
+                <section key={s.key} aria-label={s.label} className="flex min-w-0 flex-col rounded-2xl bg-neutral-900/40 p-2.5">
+                  <div className="mb-2.5 px-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-neutral-100">{s.label}</h2>
+                      <span className="text-xs text-neutral-500">{col.length}</span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-neutral-500">{s.hint}</p>
+                  </div>
+                  {col.length ? (
+                    <ul className="flex flex-col gap-2">{col.map(card)}</ul>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-neutral-800 px-3 py-6 text-center text-xs text-neutral-600">vazio</div>
                   )}
-                </li>
+                </section>
               );
             })}
-          </ul>
-          <form
-            className="flex gap-2"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!docForm.name) return;
-              await addDoc({
-                profileId: profile._id as any,
-                name: docForm.name,
-                kind: docForm.kind,
-                expiresAt: docForm.expiresAt || undefined,
-              });
-              setDocForm({ name: "", kind: "certidão", expiresAt: "" });
-            }}
-          >
-            <input
-              className="flex-1 rounded-lg bg-neutral-900 px-2 py-1.5 text-xs"
-              placeholder="Nome (ex: Certidão FGTS)"
-              value={docForm.name}
-              onChange={(e) => setDocForm({ ...docForm, name: e.target.value })}
-            />
-            <input
-              className="w-28 rounded-lg bg-neutral-900 px-2 py-1.5 text-xs"
-              type="date"
-              value={docForm.expiresAt}
-              onChange={(e) => setDocForm({ ...docForm, expiresAt: e.target.value })}
-            />
-            <button className="rounded-lg bg-emerald-600 px-3 text-xs font-semibold">+</button>
-          </form>
-        </section>
+          </div>
+        </div>
+      )}
 
-        <section className="rounded-2xl border border-neutral-800 p-5">
-          <h2 className="mb-4 font-mono text-xs uppercase tracking-wider text-neutral-400">
-            Contatos
-          </h2>
-          <ul className="mb-4 flex flex-col gap-2">
+      {archived.length > 0 && (
+        <div className="mt-6">
+          <Button variant="ghost" size="sm" onClick={() => setShowArchived((v) => !v)} aria-expanded={showArchived}>
+            {showArchived ? "Esconder" : "Mostrar"} arquivados ({archived.length})
+          </Button>
+          {showArchived && <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{archived.map(card)}</ul>}
+        </div>
+      )}
+
+      <Card as="section" className="mt-10 max-w-2xl">
+        <SectionTitle>Contatos de edital</SectionTitle>
+        <p className="mb-4 text-sm text-neutral-400">Parecerista, gestor de cultura, produtor: quem você precisa lembrar quando abrir a próxima chamada.</p>
+        {(contacts ?? []).length > 0 && (
+          <ul className="mb-4 flex flex-col divide-y divide-neutral-800">
             {(contacts ?? []).map((c) => (
-              <li key={c._id} className="rounded-xl bg-neutral-900 px-3 py-2 text-sm">
-                {c.name}
-                <span className="text-neutral-500">
-                  {c.role ? ` · ${c.role}` : ""}
-                  {c.org ? ` · ${c.org}` : ""}
-                </span>
+              <li key={c._id} className="flex flex-wrap items-baseline gap-x-2 py-2 text-sm">
+                <span className="font-medium text-neutral-100">{c.name}</span>
+                <span className="text-neutral-500">{[c.role, c.org].filter(Boolean).join(" · ")}</span>
               </li>
             ))}
           </ul>
-          <form
-            className="flex gap-2"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!contactForm.name) return;
-              await addContact({
-                profileId: profile._id as any,
-                name: contactForm.name,
-                role: contactForm.role || undefined,
-                org: contactForm.org || undefined,
-              });
-              setContactForm({ name: "", role: "", org: "" });
-            }}
-          >
-            <input
-              className="flex-1 rounded-lg bg-neutral-900 px-2 py-1.5 text-xs"
-              placeholder="Nome"
-              value={contactForm.name}
-              onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-            />
-            <input
-              className="w-24 rounded-lg bg-neutral-900 px-2 py-1.5 text-xs"
-              placeholder="Papel"
-              value={contactForm.role}
-              onChange={(e) => setContactForm({ ...contactForm, role: e.target.value })}
-            />
-            <input
-              className="w-28 rounded-lg bg-neutral-900 px-2 py-1.5 text-xs"
-              placeholder="Org"
-              value={contactForm.org}
-              onChange={(e) => setContactForm({ ...contactForm, org: e.target.value })}
-            />
-            <button className="rounded-lg bg-emerald-600 px-3 text-xs font-semibold">+</button>
-          </form>
-        </section>
-      </div>
-    </main>
+        )}
+        <form
+          className="grid gap-3 sm:grid-cols-[1.3fr_1fr_1fr_auto] sm:items-end"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!contactForm.name.trim()) return;
+            await addContact({
+              profileId: profile._id as any,
+              name: contactForm.name.trim(),
+              role: contactForm.role || undefined,
+              org: contactForm.org || undefined,
+            });
+            setContactForm({ name: "", role: "", org: "" });
+          }}
+        >
+          <Field label="Nome">
+            <Input value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} placeholder="Ex.: Ana Souza" />
+          </Field>
+          <Field label="Função">
+            <Input value={contactForm.role} onChange={(e) => setContactForm({ ...contactForm, role: e.target.value })} placeholder="Gestora" />
+          </Field>
+          <Field label="Onde">
+            <Input value={contactForm.org} onChange={(e) => setContactForm({ ...contactForm, org: e.target.value })} placeholder="Sec. de Cultura" />
+          </Field>
+          <Button type="submit" variant="secondary" className="h-11">
+            Adicionar
+          </Button>
+        </form>
+      </Card>
+    </Page>
   );
 }

@@ -3,10 +3,12 @@
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
 import { SignIn } from "@/components/SignIn";
+import { RichText } from "@/lib/format";
+import { Button, Card, EmptyState, Field, Input, Notice, Page, PageHeader, SectionTitle, Select, Skeleton } from "@/components/ui";
 
 const LEAD_TYPES = [
   "casa_de_show",
@@ -19,21 +21,33 @@ const LEAD_TYPES = [
   "outro",
 ] as const;
 
-const STATUS_ORDER = ["novo", "contatado", "respondeu", "negociando", "fechado", "perdido"];
-const STATUS_NEXT: Record<string, string> = {
-  novo: "contatado",
-  contatado: "respondeu",
-  respondeu: "negociando",
-  negociando: "fechado",
+const KIND_LABEL: Record<string, string> = {
+  casa_de_show: "Casas de show",
+  festival: "Festivais",
+  marca: "Marcas",
+  escola: "Escolas",
+  produtora: "Produtoras",
+  agencia: "Agências",
+  prefeitura: "Prefeituras",
+  outro: "Outros",
 };
 
-const STATUS_STYLE: Record<string, string> = {
-  novo: "text-sky-400",
-  contatado: "text-amber-400",
-  respondeu: "text-violet-400",
-  negociando: "text-emerald-400",
-  fechado: "text-emerald-500",
-  perdido: "text-neutral-500",
+const STATUS_ORDER = ["novo", "contatado", "respondeu", "negociando", "fechado", "perdido"];
+const STATUS_LABEL: Record<string, string> = {
+  novo: "Novo",
+  contatado: "Abordado",
+  respondeu: "Respondeu",
+  negociando: "Negociando",
+  fechado: "Fechado",
+  perdido: "Não rolou",
+};
+const STATUS_TONE: Record<string, string> = {
+  novo: "border-neutral-700 text-neutral-200",
+  contatado: "border-amber-500/40 text-amber-300",
+  respondeu: "border-violet-500/40 text-violet-300",
+  negociando: "border-emerald-500/40 text-emerald-300",
+  fechado: "border-emerald-400 text-emerald-300",
+  perdido: "border-neutral-800 text-neutral-500",
 };
 
 type Lead = {
@@ -84,20 +98,54 @@ export default function Prospeccao() {
   const [result, setResult] = useState<string | null>(null);
   const [contacted, setContacted] = useState<Set<string>>(new Set());
   const [pitches, setPitches] = useState<Record<string, { subject: string; body: string } | "loading" | "error">>({});
+  const [filter, setFilter] = useState<string>("ativos");
+  const [elapsed, setElapsed] = useState(0);
+  const [docErr, setDocErr] = useState<{ id: string; msg: string } | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [agendado, setAgendado] = useState<Set<string>>(new Set());
+  const [prefilled, setPrefilled] = useState(false);
+
+  // o formulário já vem com o que o perfil sabe (cidade, UF, área)
+  useEffect(() => {
+    if (!profile || prefilled) return;
+    setPrefilled(true);
+    if (profile.city) setCity(profile.city);
+    if (profile.uf) setUf(profile.uf);
+    if (profile.artAreas?.length) setNiche(profile.artAreas.slice(0, 2).join(" e ").toLowerCase());
+  }, [profile, prefilled]);
+
+  useEffect(() => {
+    if (!running) return;
+    setElapsed(0);
+    const t = setInterval(() => setElapsed((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [running]);
 
   async function hunt() {
-    if (!profile || !city || !niche || running) return;
+    if (!profile || !city.trim() || !niche.trim() || running) return;
     setRunning(true);
     setResult(null);
-    const r = (await prospect({
-      profileId: profile._id as any,
-      leadType,
-      niche,
-      city,
-      uf: uf || undefined,
-    })) as { found: number; upserted: number; error?: string };
-    setResult(r.error ? `Erro: ${r.error}` : `${r.found} leads encontrados, ${r.upserted} novos na lista`);
-    setRunning(false);
+    try {
+      const r = (await prospect({
+        profileId: profile._id as any,
+        leadType,
+        niche: niche.trim(),
+        city: city.trim(),
+        uf: uf || undefined,
+      })) as { found: number; upserted: number; error?: string };
+      setResult(
+        r.error
+          ? "Não deu pra concluir a pesquisa agora. Tenta de novo, ou descreve o que você oferece de um jeito mais específico."
+          : r.found === 0
+            ? "Não achei contratantes com esse perfil. Tenta outro tipo ou uma cidade maior por perto."
+            : `${r.found} ${r.found === 1 ? "contratante encontrado" : "contratantes encontrados"}. Estão na lista abaixo, prontos pra abordar.`
+      );
+    } catch {
+      setResult("Não deu pra concluir a pesquisa agora. Tenta de novo em instantes.");
+    } finally {
+      setRunning(false);
+    }
   }
 
   if (!profile) {
@@ -115,346 +163,311 @@ export default function Prospeccao() {
     );
   }
 
-  const grouped = STATUS_ORDER.map((s) => [s, (leads ?? []).filter((l) => l.status === s)] as const)
-    .filter(([, ls]) => ls.length > 0);
+  const all = leads ?? [];
+  const counts = Object.fromEntries(STATUS_ORDER.map((st) => [st, all.filter((l) => l.status === st).length]));
+  const shown = filter === "ativos" ? all.filter((l) => l.status !== "perdido" && l.status !== "fechado") : all.filter((l) => l.status === filter);
+  const num = (v: string) => Number(v.replace(/\./g, "").replace(",", "."));
+
+  async function openPdf(url: string, body: unknown, leadId: string) {
+    setDocErr(null);
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      setDocErr({ id: leadId, msg: "Não deu pra gerar o documento agora. Tenta de novo." });
+      return;
+    }
+    window.open(URL.createObjectURL(await res.blob()), "_blank");
+  }
+
+  const leadCard = (l: Lead) => {
+    const place = l.city ? `${l.city}${l.uf ? `/${l.uf}` : ""}` : "";
+    const pitch = pitches[l._id];
+    const emailTo = l.contact?.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0];
+    const phone = l.contact?.match(/\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/)?.[0]?.replace(/\D/g, "");
+    const deal = gigForm?.leadId === l._id ? gigForm : { leadId: l._id, date: "", fee: "" };
+    const closing = l.status === "negociando" || l.status === "fechado";
+    return (
+      <li key={l._id} className="flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-semibold text-neutral-50">{l.name}</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">{[KIND_LABEL[l.kind] ?? l.kind.replaceAll("_", " "), place].filter(Boolean).join(" · ")}</p>
+          </div>
+          <label className="sr-only" htmlFor={`ls-${l._id}`}>Situação de {l.name}</label>
+          <select
+            id={`ls-${l._id}`}
+            value={l.status}
+            onChange={(e) => setStatus({ id: l._id as any, status: e.target.value })}
+            className={`h-8 shrink-0 rounded-full border bg-neutral-950 px-2.5 text-xs font-medium ${STATUS_TONE[l.status] ?? ""}`}
+          >
+            {STATUS_ORDER.map((st) => (
+              <option key={st} value={st}>{STATUS_LABEL[st]}</option>
+            ))}
+          </select>
+        </div>
+
+        {l.description && <p className="mt-3 text-sm leading-relaxed text-neutral-300">{l.description}</p>}
+
+        {(l.contact || l.sourceUrl) && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            {l.contact && <span className="break-words text-neutral-200">{l.contact}</span>}
+            {l.sourceUrl && (
+              <a href={l.sourceUrl} target="_blank" rel="noreferrer" className="text-emerald-300 underline underline-offset-2">
+                Ver site ou perfil
+              </a>
+            )}
+          </div>
+        )}
+
+        {l.dossier && (
+          <details className="mt-3 rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 text-sm">
+            <summary className="cursor-pointer font-medium text-neutral-200">Dossiê: quem agenda e como chegar</summary>
+            <p className="mt-2 whitespace-pre-wrap leading-relaxed text-neutral-400"><RichText text={l.dossier} /></p>
+          </details>
+        )}
+
+        {typeof pitch === "object" && (
+          <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 text-sm">
+            <p className="font-semibold text-neutral-50">{pitch.subject}</p>
+            <p className="mt-1.5 whitespace-pre-wrap leading-relaxed text-neutral-300">{pitch.body}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={async () => { await navigator.clipboard.writeText(`${pitch.subject}\n\n${pitch.body}`).catch(() => {}); setCopied(l._id); setTimeout(() => setCopied(null), 2000); }}>
+                {copied === l._id ? "Copiado" : "Copiar texto"}
+              </Button>
+              {emailTo && (
+                <a className="inline-flex h-8 items-center rounded-full bg-emerald-400 px-3 text-xs font-semibold text-neutral-950 hover:bg-emerald-300" href={`mailto:${emailTo}?subject=${encodeURIComponent(pitch.subject)}&body=${encodeURIComponent(pitch.body)}`}>
+                  Abrir no e-mail
+                </a>
+              )}
+              {phone && (
+                <a className="inline-flex h-8 items-center rounded-full border border-neutral-700 px-3 text-xs font-medium text-neutral-100 hover:border-neutral-500" target="_blank" rel="noreferrer" href={`https://wa.me/55${phone}?text=${encodeURIComponent(pitch.body)}`}>
+                  Mandar no WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+        {pitch === "error" && <p className="mt-3 text-sm text-red-300">Não consegui escrever agora. Tenta de novo em instantes.</p>}
+
+        {closing && (
+          <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-950/60 p-3.5">
+            <p className="text-sm font-medium text-neutral-100">{l.status === "fechado" ? "Fechou. Registra a data e o cachê:" : "Negociando. Com data e cachê eu monto os documentos:"}</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Field label="Data">
+                <Input type="date" value={deal.date} onChange={(e) => setGigForm({ ...deal, date: e.target.value })} />
+              </Field>
+              <Field label="Cachê (R$)">
+                <Input inputMode="decimal" placeholder="1.500" value={deal.fee} onChange={(e) => setGigForm({ ...deal, fee: e.target.value.replace(/[^\d.,]/g, "") })} />
+              </Field>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => openPdf("/api/proposta", {
+                profile: { name: profile.name, personType: profile.personType, portfolioUrl: profile.portfolioUrl, email: profile.email },
+                lead: { name: l.name, kind: l.kind, city: l.city },
+                gig: { title: `Apresentação: ${l.name}`, date: deal.date || undefined, fee: deal.fee ? num(deal.fee) : undefined },
+              }, l._id)}>
+                Proposta em PDF
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => {
+                if (!deal.date || !deal.fee) { setDocErr({ id: l._id, msg: "O contrato precisa da data e do cachê. Preenche os dois acima." }); return; }
+                void openPdf("/api/contrato", {
+                  profile: { name: profile.name, personType: profile.personType, email: profile.email },
+                  lead: { name: l.name, kind: l.kind, city: l.city },
+                  gig: { title: `Apresentação: ${l.name}`, date: deal.date, fee: num(deal.fee), venue: l.city },
+                }, l._id);
+              }}>
+                Contrato em PDF
+              </Button>
+              {l.status === "fechado" && (
+                <Button size="sm" disabled={!deal.date} onClick={async () => {
+                  await addGig({ profileId: profile._id as any, leadId: l._id as any, title: l.name, venue: place || undefined, date: deal.date, fee: deal.fee ? num(deal.fee) : undefined });
+                  setGigForm(null);
+                  setAgendado((s) => new Set(s).add(l._id));
+                }}>
+                  {agendado.has(l._id) ? "Está na agenda" : "Pôr na agenda"}
+                </Button>
+              )}
+            </div>
+            {docErr?.id === l._id && <p className="mt-2 text-sm text-red-300">{docErr.msg}</p>}
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-800 pt-3.5">
+          {l.status !== "perdido" && typeof pitch !== "object" && (
+            <Button size="sm" loading={pitch === "loading"} onClick={async () => {
+              setPitches((p) => ({ ...p, [l._id]: "loading" }));
+              try {
+                const res = await fetch("/api/pitch", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    profile: { name: profile.name, artAreas: profile.artAreas, bio: profile.bio, portfolioUrl: profile.portfolioUrl },
+                    lead: { name: l.name, kind: l.kind, city: l.city, dossier: l.dossier },
+                  }),
+                });
+                const data = await res.json();
+                setPitches((p) => ({ ...p, [l._id]: !res.ok || data.error ? "error" : data }));
+              } catch {
+                setPitches((p) => ({ ...p, [l._id]: "error" }));
+              }
+            }}>
+              Escrever abordagem
+            </Button>
+          )}
+          {l.status !== "perdido" && (
+            <Button size="sm" variant="ghost" loading={dossierBusy.has(l._id)} onClick={async () => {
+              setDossierBusy((st) => new Set(st).add(l._id));
+              try {
+                await research({ targetType: "lead", id: String(l._id), profileId: profile._id as any, name: l.name, city: l.city, uf: l.uf, kind: l.kind, sourceUrl: l.sourceUrl });
+              } catch {
+                setDocErr({ id: l._id, msg: "A pesquisa não voltou. Tenta de novo." });
+              } finally {
+                setDossierBusy((st) => { const n = new Set(st); n.delete(l._id); return n; });
+              }
+            }}>
+              {dossierBusy.has(l._id) ? "Pesquisando" : l.dossier ? "Refazer dossiê" : "Quem agenda?"}
+            </Button>
+          )}
+          {contacted.has(l._id) ? (
+            <span className="px-2 text-xs text-emerald-300">Salvo nos contatos</span>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={async () => {
+              await addContact({
+                profileId: profile._id as any,
+                name: l.name,
+                org: place || undefined,
+                role: KIND_LABEL[l.kind] ?? l.kind.replaceAll("_", " "),
+                email: emailTo,
+                phone: !emailTo && l.contact ? l.contact : undefined,
+                notes: `Lead de prospecção${l.sourceUrl ? ` · ${l.sourceUrl}` : ""}`,
+              });
+              setContacted(new Set(contacted).add(l._id));
+            }}>
+              Salvar contato
+            </Button>
+          )}
+          <span className="flex-1" />
+          {confirmDel === l._id ? (
+            <>
+              <Button size="sm" variant="danger" onClick={async () => { await removeLead({ id: l._id as any }); setConfirmDel(null); }}>Remover</Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDel(null)}>Manter</Button>
+            </>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDel(l._id)}>Remover</Button>
+          )}
+        </div>
+        {docErr?.id === l._id && !closing && <p className="mt-2 text-sm text-red-300">{docErr.msg}</p>}
+      </li>
+    );
+  };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8">
-        <h1 className="text-4xl sm:text-5xl text-neutral-50">Prospecção</h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          O agente caça quem contrata você — casas de show, festivais, marcas, escolas — e vira funil de carreira.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        title="Prospecção"
+        description="O agente pesquisa quem contrata gente como você na tua cidade e traz com contato. Você aborda, negocia e fecha por aqui."
+      />
 
       {pending?.length ? (
-        <section className="mb-8 rounded-2xl border border-violet-800 bg-violet-950/30 p-5">
-          <h2 className="mb-3 text-sm font-bold text-violet-300">
-            ⚡ O coach propõe — você decide ({pending.length})
-          </h2>
-          <ul className="flex flex-col gap-2">
+        <Card as="section" className="mb-6 border-violet-500/40">
+          <SectionTitle>O coach sugere ({pending.length})</SectionTitle>
+          <ul className="flex flex-col divide-y divide-neutral-800">
             {pending.map((p) => (
-              <li key={p._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-neutral-900/60 px-4 py-3">
-                <div>
-                  <p className="text-sm">{p.label}</p>
+              <li key={p._id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-100">{p.label}</p>
                   {p.description && <p className="text-xs text-neutral-500">{p.description}</p>}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => applyAction({ id: p._id as any })}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold"
-                  >
-                    aplicar
-                  </button>
-                  <button
-                    onClick={() => dismissAction({ id: p._id as any })}
-                    className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs"
-                  >
-                    ignorar
-                  </button>
+                  <Button size="sm" onClick={() => applyAction({ id: p._id as any })}>Aplicar</Button>
+                  <Button size="sm" variant="ghost" onClick={() => dismissAction({ id: p._id as any })}>Ignorar</Button>
                 </div>
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       ) : null}
 
-      <section className="mb-8 rounded-2xl border border-neutral-800 p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <select
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            value={leadType}
-            onChange={(e) => setLeadType(e.target.value)}
-          >
-            {LEAD_TYPES.map((t) => (
-              <option key={t} value={t}>{t.replaceAll("_", " ")}</option>
-            ))}
-          </select>
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="nicho (ex: banda de forró)"
-            value={niche}
-            onChange={(e) => setNiche(e.target.value)}
-          />
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="cidade"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-          />
-          <input
-            className="rounded-xl bg-neutral-900 px-4 py-3"
-            placeholder="UF"
-            maxLength={2}
-            value={uf}
-            onChange={(e) => setUf(e.target.value.toUpperCase())}
-          />
-        </div>
-        <div className="mt-3 flex items-center gap-4">
-          <button
-            onClick={hunt}
-            disabled={running || !city || !niche}
-            className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-40"
-          >
-            {running ? "Caçando…" : "Caçar leads"}
-          </button>
-          <button
-            onClick={async () => {
+      <Card as="section" className="mb-8">
+        <SectionTitle>Caçar contratantes</SectionTitle>
+        <form
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.4fr_1.1fr_5.5rem]"
+          onSubmit={(e) => { e.preventDefault(); void hunt(); }}
+        >
+          <Field label="Quem você procura">
+            <Select value={leadType} onChange={(e) => setLeadType(e.target.value)}>
+              {LEAD_TYPES.map((t) => (
+                <option key={t} value={t}>{KIND_LABEL[t]}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="O que você oferece">
+            <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="Ex.: trio de forró pé de serra" />
+          </Field>
+          <Field label="Cidade">
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Campinas" />
+          </Field>
+          <Field label="UF">
+            <Input maxLength={2} value={uf} onChange={(e) => setUf(e.target.value.toUpperCase())} placeholder="SP" />
+          </Field>
+          <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
+            <Button type="submit" loading={running} disabled={!city.trim() || !niche.trim()}>
+              {running ? "Pesquisando" : "Caçar leads"}
+            </Button>
+            <Button type="button" variant="ghost" disabled={running} onClick={async () => {
               const r = await seedMapa({ profileId: profile._id as any });
-              setResult(`Mapa de agências: ${r.added} novos leads verificados (agências + feiras de showcase)`);
-            }}
-            className="rounded-xl border border-emerald-500/50 px-4 py-3 text-sm text-emerald-400"
-            title="Planta leads verificados: agências de booking BR + feiras de showcase com inscrição gratuita"
-          >
-            🗺 Mapa de agências
-          </button>
-          {result && <p className="font-mono text-xs text-neutral-400">{result}</p>}
-        </div>
-      </section>
+              setResult(r.added ? `${r.added} agências de booking e feiras de showcase entraram na tua lista.` : "As agências e feiras verificadas já estão na tua lista.");
+            }}>
+              Adicionar agências e feiras verificadas
+            </Button>
+          </div>
+        </form>
 
-      {leads && leads.length === 0 && !result && (
-        <p className="text-sm text-neutral-500">
-          Nenhum lead ainda. Define o tipo, o teu nicho e a cidade — o agente traz a lista com contato.
-        </p>
-      )}
+        {running && (
+          <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4" role="status" aria-live="polite">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <p className="font-medium text-neutral-100">
+                Pesquisando {KIND_LABEL[leadType]?.toLowerCase()} em {city}. Isso leva de 1 a 2 minutos.
+              </p>
+              <span className="shrink-0 font-mono text-xs text-neutral-400">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-800">
+              <div className="h-1.5 rounded-full bg-emerald-400 transition-[width] duration-1000" style={{ width: `${Math.min(95, (elapsed / 110) * 100)}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-neutral-500">O agente está abrindo sites e perfis reais pra confirmar que existem e achar o contato. Pode deixar esta aba aberta.</p>
+          </div>
+        )}
+        {!running && result && (
+          <div className="mt-5"><Notice tone={result.startsWith("Não") ? "bad" : "good"}>{result}</Notice></div>
+        )}
+      </Card>
 
-      {grouped.map(([status, ls]) => (
-        <section key={status} className="mb-6">
-          <h2 className={`mb-3 font-mono text-xs uppercase tracking-widest ${STATUS_STYLE[status]}`}>
-            {status} · {ls.length}
-          </h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {ls.map((l) => (
-              <article key={l._id} className="rounded-2xl border border-neutral-800 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold">{l.name}</h3>
-                    <p className="font-mono text-xs text-neutral-500">
-                      {l.kind.replaceAll("_", " ")}
-                      {l.city ? ` · ${l.city}${l.uf ? `/${l.uf}` : ""}` : ""}
-                    </p>
-                  </div>
-                  {l.sourceUrl && (
-                    <a
-                      href={l.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 font-mono text-xs text-emerald-400 hover:underline"
-                    >
-                      perfil →
-                    </a>
-                  )}
-                </div>
-                {l.description && (
-                  <p className="mt-2 text-sm text-neutral-400">{l.description}</p>
-                )}
-                {l.status !== "perdido" && (
-                  <button
-                    onClick={async () => {
-                      setDossierBusy((s) => new Set(s).add(l._id));
-                      try {
-                        await research({
-                          targetType: "lead",
-                          id: String(l._id),
-                          profileId: profile._id as any,
-                          name: l.name,
-                          city: l.city,
-                          uf: l.uf,
-                          kind: l.kind,
-                          sourceUrl: l.sourceUrl,
-                        });
-                      } finally {
-                        setDossierBusy((s) => { const n = new Set(s); n.delete(l._id); return n; });
-                      }
-                    }}
-                    className="mt-2 text-xs text-violet-400 hover:underline"
-                  >
-                    {dossierBusy.has(l._id) ? "🔍 pesquisando…" : l.dossier ? "🔍 refazer dossiê" : "🔍 dossiê OSINT"}
-                  </button>
-                )}
-                {l.dossier && (
-                  <details className="mt-2 rounded-lg border border-violet-900/50 bg-violet-950/20 p-3 text-xs">
-                    <summary className="cursor-pointer font-semibold text-violet-300">dossiê — quem agenda + rapport</summary>
-                    <p className="mt-2 whitespace-pre-wrap text-neutral-400">{l.dossier}</p>
-                  </details>
-                )}
-                {l.contact && (
-                  <p className="mt-2 font-mono text-xs text-emerald-300">✉ {l.contact}</p>
-                )}
-                {l.status !== "perdido" && (
-                  <div className="mt-2">
-                    {pitches[l._id] === undefined && (
-                      <button
-                        onClick={async () => {
-                          setPitches((p) => ({ ...p, [l._id]: "loading" }));
-                          const res = await fetch("/api/pitch", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              profile: { name: profile.name, artAreas: profile.artAreas, bio: profile.bio, portfolioUrl: profile.portfolioUrl },
-                              lead: { name: l.name, kind: l.kind, city: l.city, dossier: l.dossier },
-                            }),
-                          });
-                          const data = await res.json();
-                          setPitches((p) => ({ ...p, [l._id]: data.error ? "error" : data }));
-                        }}
-                        className="text-xs text-emerald-400 hover:underline"
-                      >
-                        ✍ escrever pitch de booking
-                      </button>
-                    )}
-                    {pitches[l._id] === "loading" && <p className="text-xs text-neutral-500">escrevendo…</p>}
-                    {pitches[l._id] === "error" && <p className="text-xs text-red-400">falhou — configura LLM_API_KEY</p>}
-                    {typeof pitches[l._id] === "object" && (
-                      <div className="rounded-lg bg-neutral-900 p-3 text-xs">
-                        <p className="font-semibold text-neutral-200">{(pitches[l._id] as any).subject}</p>
-                        <p className="mt-1 whitespace-pre-wrap text-neutral-400">{(pitches[l._id] as any).body}</p>
-                        <a
-                          href={`mailto:${l.contact?.includes("@") ? l.contact : ""}?subject=${encodeURIComponent((pitches[l._id] as any).subject)}&body=${encodeURIComponent((pitches[l._id] as any).body)}`}
-                          className="mt-2 inline-block rounded-lg bg-emerald-600 px-3 py-1 font-semibold text-black"
-                        >
-                          abrir no email →
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {(l.status === "negociando" || l.status === "fechado") && (
-                  <button
-                    onClick={async () => {
-                      const res = await fetch("/api/proposta", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          profile: { name: profile.name, personType: profile.personType, portfolioUrl: profile.portfolioUrl, email: profile.email },
-                          lead: { name: l.name, kind: l.kind, city: l.city },
-                          gig: {
-                            title: `Apresentação — ${l.name}`,
-                            date: gigForm?.leadId === l._id ? gigForm.date : undefined,
-                            fee: gigForm?.leadId === l._id && gigForm.fee ? Number(gigForm.fee.replace(",", ".")) : undefined,
-                          },
-                        }),
-                      });
-                      if (!res.ok) return;
-                      const blob = await res.blob();
-                      window.open(URL.createObjectURL(blob), "_blank");
-                    }}
-                    className="mt-2 text-xs text-sky-400 hover:underline"
-                  >
-                    📄 gerar proposta em PDF
-                  </button>
-                )}
-                {(l.status === "negociando" || l.status === "fechado") && (
-                  <button
-                    onClick={async () => {
-                      const date = gigForm?.leadId === l._id ? gigForm.date : "";
-                      const fee = gigForm?.leadId === l._id ? Number(gigForm.fee.replace(",", ".")) : 0;
-                      if (!date || !fee) {
-                        alert("Preenche a data e o cachê no bloco 'virou trampo?' — o contrato precisa dos dois.");
-                        return;
-                      }
-                      const res = await fetch("/api/contrato", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          profile: { name: profile.name, personType: profile.personType, email: profile.email },
-                          lead: { name: l.name, kind: l.kind, city: l.city },
-                          gig: { title: `Apresentação — ${l.name}`, date, fee, venue: l.city },
-                        }),
-                      });
-                      if (!res.ok) return;
-                      const blob = await res.blob();
-                      window.open(URL.createObjectURL(blob), "_blank");
-                    }}
-                    className="ml-3 mt-2 text-xs text-amber-400 hover:underline"
-                  >
-                    📝 gerar contrato
-                  </button>
-                )}
-                {l.status === "fechado" && (
-                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-950/40 p-2">
-                    <span className="text-xs text-emerald-400">virou trampo?</span>
-                    <input
-                      type="date"
-                      className="rounded-lg bg-neutral-900 px-2 py-1 text-xs"
-                      value={gigForm?.leadId === l._id ? gigForm.date : ""}
-                      onChange={(e) => setGigForm({ leadId: l._id, date: e.target.value, fee: gigForm?.fee ?? "" })}
-                    />
-                    <input
-                      placeholder="R$"
-                      className="w-20 rounded-lg bg-neutral-900 px-2 py-1 text-xs"
-                      value={gigForm?.leadId === l._id ? gigForm.fee : ""}
-                      onChange={(e) => setGigForm({ leadId: l._id, date: gigForm?.date ?? "", fee: e.target.value })}
-                    />
-                    <button
-                      disabled={!gigForm || gigForm.leadId !== l._id || !gigForm.date}
-                      onClick={async () => {
-                        await addGig({
-                          profileId: profile._id as any,
-                          leadId: l._id as any,
-                          title: l.name,
-                          venue: l.city ? `${l.city}${l.uf ? `/${l.uf}` : ""}` : undefined,
-                          date: gigForm!.date,
-                          fee: gigForm!.fee ? Number(gigForm!.fee.replace(",", ".")) : undefined,
-                        });
-                        setGigForm(null);
-                      }}
-                      className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-black disabled:opacity-40"
-                    >
-                      + gig
-                    </button>
-                  </div>
-                )}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {STATUS_NEXT[l.status] && (
-                    <button
-                      onClick={() => setStatus({ id: l._id as any, status: STATUS_NEXT[l.status] })}
-                      className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs hover:bg-neutral-700"
-                    >
-                      → {STATUS_NEXT[l.status]}
-                    </button>
-                  )}
-                  {l.status !== "fechado" && l.status !== "perdido" && (
-                    <button
-                      onClick={() => setStatus({ id: l._id as any, status: "perdido" })}
-                      className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-700"
-                    >
-                      ✕ perdido
-                    </button>
-                  )}
-                  {!contacted.has(l._id) ? (
-                    <button
-                      onClick={async () => {
-                        await addContact({
-                          profileId: profile._id as any,
-                          name: l.name,
-                          org: l.city ? `${l.city}${l.uf ? `/${l.uf}` : ""}` : undefined,
-                          role: l.kind.replaceAll("_", " "),
-                          email: l.contact?.includes("@") ? l.contact : undefined,
-                          phone: l.contact && !l.contact.includes("@") ? l.contact : undefined,
-                          notes: `Lead de prospecção${l.sourceUrl ? ` · ${l.sourceUrl}` : ""}`,
-                        });
-                        setContacted(new Set(contacted).add(l._id));
-                      }}
-                      className="rounded-lg bg-emerald-900 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-800"
-                    >
-                      + contato
-                    </button>
-                  ) : (
-                    <span className="px-3 py-1.5 text-xs text-emerald-500">✓ contato</span>
-                  )}
-                  <button
-                    onClick={() => removeLead({ id: l._id as any })}
-                    className="ml-auto rounded-lg px-3 py-1.5 text-xs text-neutral-600 hover:text-red-400"
-                  >
-                    remover
-                  </button>
-                </div>
-              </article>
+      {leads === undefined ? (
+        <div className="grid gap-3 md:grid-cols-2"><Skeleton className="h-48" /><Skeleton className="h-48" /></div>
+      ) : all.length === 0 ? (
+        <EmptyState icon="📡" title="Nenhum contratante na lista ainda">
+          Diz o que você oferece e a cidade no formulário acima. Em 2 minutos você tem casas, festivais ou escolas com contato pra abordar.
+        </EmptyState>
+      ) : (
+        <>
+          <div className="no-scrollbar -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1" role="group" aria-label="Filtrar por situação">
+            {[{ id: "ativos", label: `Em aberto (${all.filter((l) => l.status !== "perdido" && l.status !== "fechado").length})` }, ...STATUS_ORDER.filter((st) => counts[st] > 0).map((st) => ({ id: st, label: `${STATUS_LABEL[st]} (${counts[st]})` }))].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                aria-pressed={filter === f.id}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${filter === f.id ? "bg-neutral-800 text-neutral-50" : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"}`}
+              >
+                {f.label}
+              </button>
             ))}
           </div>
-        </section>
-      ))}
-    </main>
+          {shown.length === 0 ? (
+            <p className="py-8 text-center text-sm text-neutral-500">Nenhum lead nessa situação.</p>
+          ) : (
+            <ul className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">{shown.map(leadCard)}</ul>
+          )}
+        </>
+      )}
+    </Page>
   );
 }

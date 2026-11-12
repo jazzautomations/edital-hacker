@@ -9,6 +9,12 @@ const VERDICT = v.object({
   missingDocs: v.array(v.string()),
   warnings: v.optional(v.array(v.string())),
   injectionDetected: v.optional(v.boolean()),
+  // precisa espelhar o schema: sem estes dois, TODO veredito com nota por
+  // critério era rejeitado e nenhuma sabatina ficava salva
+  documentalGate: v.optional(v.string()),
+  criterionScores: v.optional(
+    v.array(v.object({ criterion: v.string(), score: v.number(), note: v.optional(v.string()) }))
+  ),
 });
 
 export const save = mutation({

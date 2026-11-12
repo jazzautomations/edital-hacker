@@ -43,7 +43,7 @@ export function tidyTitle(raw: string): string {
 /** Markdown mínimo do LLM: **negrito**, `código` e rotas do app viram links. */
 export function RichText({ text }: { text: string }) {
   const out: ReactNode[] = [];
-  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinatura|epk))\b/g;
+  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinatura|documentos|inicio|epk))\b|(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
@@ -51,6 +51,8 @@ export function RichText({ text }: { text: string }) {
     if (m.index > last) out.push(<Fragment key={k++}>{text.slice(last, m.index)}</Fragment>);
     if (m[1] !== undefined) {
       out.push(<RichInline key={k++} text={m[1]} bold />);
+    } else if (m[4] !== undefined) {
+      out.push(<em key={k++}><RichText text={m[4]} /></em>);
     } else {
       const route = m[3] ?? (m[2]?.match(/^\/[a-z]+$/) ? m[2] : null);
       if (route) {
@@ -77,6 +79,7 @@ const ROUTE_LABEL: Record<string, string> = {
   "/prospeccao": "prospecção",
   "/prestacao": "prestação",
   "/oportunidades": "radar",
+  "/inicio": "início",
 };
 
 function RichInline({ text, bold }: { text: string; bold?: boolean }) {
