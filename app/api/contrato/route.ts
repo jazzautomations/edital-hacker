@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { pdfSafe } from "@/lib/pdfText";
+import { dataBr, pdfSafe } from "@/lib/pdfText";
 
 // Contrato de apresentação artística — estrutura canônica do mercado BR
 // (modelo LL Cultural/SEDEP: 10 cláusulas + checklist de negociação em anexo).
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     y -= 12;
 
     clause("1ª", "DO OBJETO",
-      `Apresentação artística "${gig.title ?? "show ao vivo"}"${gig.lineup ? ` na formação ${gig.lineup}` : ""} em ${gig.date}` +
+      `Apresentação artística "${gig.title ?? "show ao vivo"}"${gig.lineup ? ` na formação ${gig.lineup}` : ""} em ${dataBr(gig.date)}` +
       `${gig.venue ? `, no local ${gig.venue}` : ""}` +
       `, com duração de até ${gig.durationMin ?? 120} minutos. Serviço de natureza pessoal e intransferível.`);
     clause("2ª", "DA GRADE DO DIA",

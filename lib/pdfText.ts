@@ -20,3 +20,9 @@ export function pdfSafe(input: unknown): string {
   }
   return out.replace(/ {2,}/g, " ");
 }
+
+/** 2026-12-20 → 20/12/2026 (documento brasileiro não leva data em ISO). */
+export function dataBr(iso?: string | null): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso ?? "");
+}

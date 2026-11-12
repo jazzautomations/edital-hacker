@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { pdfSafe } from "@/lib/pdfText";
+import { dataBr, pdfSafe } from "@/lib/pdfText";
 
 // Gera proposta/orçamento de alta conversão em PDF — o ativo que o Thiago Kiss
 // vende como bônus-estrela, produzido aqui em 1 clique a partir do lead.
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     line("ESCOPO", 10, bold, 60, accent);
     line(gig.title ?? "Apresentação artística ao vivo", 12, bold);
-    if (gig.date) line(`Data: ${gig.date}`, 10);
+    if (gig.date) line(`Data: ${dataBr(gig.date)}`, 10);
     line(
       gig.scope ??
         "Apresentação de até 120 minutos, com repertório combinado previamente com o contratante. Inclui ensaio/soundcheck no dia e material promocional do artista para divulgação do evento.",
@@ -55,6 +55,7 @@ export async function POST(req: Request) {
 
     line("INVESTIMENTO", 10, bold, 60, accent);
     if (gig.fee) {
+      y -= 12; // o valor é grande (22pt): desce pra não encavalar no rótulo
       page.drawText(pdfSafe(`R$ ${gig.fee.toLocaleString("pt-BR")}`), { x: 60, y, size: 22, font: bold, color: ink });
       y -= 30;
     }

@@ -6,14 +6,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuthEmail } from "@/lib/useAuth";
 import { SignIn } from "@/components/SignIn";
+import { Button, Card, Field, Input, Notice, Page, PageHeader, SectionTitle, Textarea } from "@/components/ui";
 
 // Rider técnico versionado — o artista mantém trio/banda/solo prontos
 // e manda PDF pro técnico de som antes de qualquer negociação fechar.
 type Member = { position: string; instrument: string; vocals?: boolean };
-type Input = { channel: number; source: string; mic: string };
+type Channel = { channel: number; source: string; mic: string };
 type Rider = {
   _id?: string; name: string; techContact?: string;
-  members: Member[]; inputs: Input[];
+  members: Member[]; inputs: Channel[];
   monitors?: string; backlineOwn?: string; backlineVenue?: string;
   hospitality?: string; notes?: string;
 };
@@ -35,6 +36,8 @@ export default function RiderPage() {
 
   const [form, setForm] = useState<Rider>(EMPTY);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   if (!profile) {
     return (
@@ -53,7 +56,7 @@ export default function RiderPage() {
 
   const setMember = (i: number, patch: Partial<Member>) =>
     setForm({ ...form, members: form.members.map((m, n) => (n === i ? { ...m, ...patch } : m)) });
-  const setInput = (i: number, patch: Partial<Input>) =>
+  const setInput = (i: number, patch: Partial<Channel>) =>
     setForm({ ...form, inputs: form.inputs.map((m, n) => (n === i ? { ...m, ...patch } : m)) });
 
   const gen = async () => {
@@ -64,113 +67,170 @@ export default function RiderPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           profile: { name: profile.name, city: profile.city, phone: profile.phone },
-          rider: form,
+          rider: payload(),
         }),
       });
-      if (res.ok) window.open(URL.createObjectURL(await res.blob()), "_blank");
+      if (!res.ok) throw new Error("pdf");
+      window.open(URL.createObjectURL(await res.blob()), "_blank");
     } finally { setBusy(false); }
   };
 
+  // só os campos do rider vão pro servidor (o registro carregado traz _id,
+  // _creationTime etc. — mandar tudo fazia o salvar de um rider existente falhar)
+  const payload = () => ({
+    name: form.name.trim(),
+    techContact: form.techContact || undefined,
+    members: form.members.filter((m) => m.instrument.trim()).map((m) => ({ position: m.position, instrument: m.instrument, vocals: m.vocals })),
+    inputs: form.inputs.filter((i) => i.source.trim()).map((i) => ({ channel: i.channel, source: i.source, mic: i.mic })),
+    monitors: form.monitors || undefined,
+    backlineOwn: form.backlineOwn || undefined,
+    backlineVenue: form.backlineVenue || undefined,
+    hospitality: form.hospitality || undefined,
+    notes: form.notes || undefined,
+  });
+  const ok = form.name.trim() && form.members.some((m) => m.instrument.trim());
+
+  const LONG: { k: "monitors" | "backlineOwn" | "backlineVenue" | "hospitality" | "notes"; label: string; ph: string }[] = [
+    { k: "monitors", label: "Monitoração", ph: "Ex.: 3 vias de monitor, voz na 1 com reverb" },
+    { k: "backlineOwn", label: "O que a banda leva", ph: "Ex.: instrumentos, pedais, cabos" },
+    { k: "backlineVenue", label: "O que a casa precisa fornecer", ph: "Ex.: bateria completa, amplificador de baixo, 4 pedestais" },
+    { k: "hospitality", label: "Camarim e hospitalidade", ph: "Ex.: água, 4 refeições, camarim com espelho" },
+    { k: "notes", label: "Observações", ph: "Tudo que o técnico da casa precisa saber" },
+  ];
+
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl sm:text-5xl text-neutral-50">Rider técnico</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            O documento que separa amador de profissional — mapa de palco, input list e camarim em PDF.
-          </p>
-        </div>
-        <div className="flex gap-4 text-sm">
-          <Link href="/agenda" className="text-emerald-400 hover:underline">Agenda →</Link>
-          <Link href="/coach" className="text-amber-400 hover:underline">Coach →</Link>
-        </div>
-      </header>
+    <Page width="max-w-3xl">
+      <PageHeader
+        title="Rider técnico"
+        description="Mapa de palco, lista de canais e camarim num PDF de uma página. É o documento que o produtor pede antes de fechar."
+      />
 
       {(riders?.length ?? 0) > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-neutral-500">Tuas formações:</span>
           {riders!.map((r) => (
-            <button key={r._id}
-              onClick={() => setForm({ ...EMPTY, ...r })}
-              className={`rounded-lg border px-3 py-1.5 text-xs ${form._id === r._id ? "border-emerald-500 text-emerald-400" : "border-neutral-800 text-neutral-400"}`}>
-              {r.name} ({r.members.length})
+            <button
+              key={r._id}
+              onClick={() => { setForm({ ...EMPTY, ...r }); setSaved(false); }}
+              aria-pressed={form._id === r._id}
+              className={`rounded-full border px-3.5 py-1.5 text-sm ${form._id === r._id ? "border-emerald-400 bg-emerald-400 font-semibold text-neutral-950" : "border-neutral-700 text-neutral-300 hover:border-neutral-500"}`}
+            >
+              {r.name}
             </button>
           ))}
+          <button onClick={() => { setForm(EMPTY); setSaved(false); }} className="rounded-full px-3 py-1.5 text-sm text-emerald-300 hover:underline">
+            Nova formação
+          </button>
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <input className="rounded-xl bg-neutral-900 px-4 py-3" placeholder="nome da formação (trio, banda cheia)"
-          value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className="rounded-xl bg-neutral-900 px-4 py-3" placeholder="contato técnico (nome + fone)"
-          value={form.techContact ?? ""} onChange={(e) => setForm({ ...form, techContact: e.target.value })} />
+      <div className="flex flex-col gap-5">
+        <Card as="section">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nome da formação" hint="Ex.: trio acústico, banda completa.">
+              <Input value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setSaved(false); }} />
+            </Field>
+            <Field label="Contato técnico" hint="Nome e telefone de quem responde pelo som.">
+              <Input value={form.techContact ?? ""} onChange={(e) => setForm({ ...form, techContact: e.target.value })} />
+            </Field>
+          </div>
+        </Card>
+
+        <Card as="section">
+          <SectionTitle>Quem está no palco</SectionTitle>
+          <p className="mb-4 text-sm text-neutral-400">Posição vista da plateia: “centro-frente”, “esquerda-fundo”. Vira o mapa de palco do PDF.</p>
+          <ul className="flex flex-col gap-3">
+            {form.members.map((m, i) => (
+              <li key={i} className="grid grid-cols-[1fr_1.3fr] items-end gap-2 sm:grid-cols-[10rem_1fr_auto_auto]">
+                <Field label={i === 0 ? "Posição" : "Posição"} className={i > 0 ? "[&>span:first-child]:sr-only" : ""}>
+                  <Input value={m.position} onChange={(e) => setMember(i, { position: e.target.value })} placeholder="centro-frente" />
+                </Field>
+                <Field label="Instrumento ou função" className={i > 0 ? "[&>span:first-child]:sr-only" : ""}>
+                  <Input value={m.instrument} onChange={(e) => setMember(i, { instrument: e.target.value })} placeholder="violão" />
+                </Field>
+                <label className="flex h-11 items-center gap-2 text-sm text-neutral-300">
+                  <input type="checkbox" className="h-4 w-4" checked={!!m.vocals} onChange={(e) => setMember(i, { vocals: e.target.checked })} />
+                  canta
+                </label>
+                <Button type="button" variant="ghost" size="sm" className="mb-1.5 justify-self-end" aria-label={`Remover ${m.instrument || "músico"}`} onClick={() => setForm({ ...form, members: form.members.filter((_, n) => n !== i) })}>
+                  Remover
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={() => setForm({ ...form, members: [...form.members, { position: "", instrument: "" }] })}>
+            Adicionar músico
+          </Button>
+        </Card>
+
+        <Card as="section">
+          <SectionTitle>Lista de canais</SectionTitle>
+          <p className="mb-4 text-sm text-neutral-400">Um canal por fonte de som. O técnico da casa monta a mesa por esta lista.</p>
+          <ul className="flex flex-col gap-3">
+            {form.inputs.map((m, i) => (
+              <li key={i} className="grid grid-cols-[3.5rem_1fr] items-end gap-2 sm:grid-cols-[4rem_1fr_1fr_auto]">
+                <Field label="Canal" className={i > 0 ? "[&>span:first-child]:sr-only" : ""}>
+                  <Input inputMode="numeric" value={m.channel} onChange={(e) => setInput(i, { channel: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
+                </Field>
+                <Field label="O que entra" className={i > 0 ? "[&>span:first-child]:sr-only" : ""}>
+                  <Input value={m.source} onChange={(e) => setInput(i, { source: e.target.value })} placeholder="voz, bumbo, baixo" />
+                </Field>
+                <Field label="Microfone ou DI" className={`col-span-2 sm:col-span-1 ${i > 0 ? "[&>span:first-child]:sr-only" : ""}`}>
+                  <Input value={m.mic} onChange={(e) => setInput(i, { mic: e.target.value })} placeholder="SM58, DI ativo" />
+                </Field>
+                <Button type="button" variant="ghost" size="sm" className="col-span-2 mb-1.5 justify-self-end sm:col-span-1" aria-label={`Remover canal ${m.channel}`} onClick={() => setForm({ ...form, inputs: form.inputs.filter((_, n) => n !== i) })}>
+                  Remover
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={() => setForm({ ...form, inputs: [...form.inputs, { channel: form.inputs.length + 1, source: "", mic: "" }] })}>
+            Adicionar canal
+          </Button>
+        </Card>
+
+        <Card as="section">
+          <SectionTitle>Estrutura e camarim</SectionTitle>
+          <div className="flex flex-col gap-4">
+            {LONG.map(({ k, label, ph }) => (
+              <Field key={k} label={label}>
+                <Textarea rows={2} className="!min-h-16" placeholder={ph} value={form[k] ?? ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
+              </Field>
+            ))}
+          </div>
+        </Card>
       </div>
 
-      <section className="mb-4 rounded-2xl border border-neutral-800 p-4">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-neutral-400">Formação (palco visto de cima)</h2>
-        {form.members.map((m, i) => (
-          <div key={i} className="mb-2 flex gap-2">
-            <input className="w-32 rounded-lg bg-neutral-900 px-3 py-2 text-xs" placeholder="posição"
-              value={m.position} onChange={(e) => setMember(i, { position: e.target.value })} />
-            <input className="flex-1 rounded-lg bg-neutral-900 px-3 py-2 text-xs" placeholder="instrumento/função"
-              value={m.instrument} onChange={(e) => setMember(i, { instrument: e.target.value })} />
-            <label className="flex items-center gap-1 text-xs text-neutral-400">
-              <input type="checkbox" checked={!!m.vocals} onChange={(e) => setMember(i, { vocals: e.target.checked })} /> voz
-            </label>
-            <button onClick={() => setForm({ ...form, members: form.members.filter((_, n) => n !== i) })}
-              className="text-xs text-neutral-600 hover:text-red-400">✕</button>
-          </div>
-        ))}
-        <button onClick={() => setForm({ ...form, members: [...form.members, { position: "", instrument: "" }] })}
-          className="text-xs text-emerald-400 hover:underline">+ músico</button>
-      </section>
+      {err && <div className="mt-5"><Notice tone="bad">{err}</Notice></div>}
 
-      <section className="mb-4 rounded-2xl border border-neutral-800 p-4">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-neutral-400">Input list</h2>
-        {form.inputs.map((m, i) => (
-          <div key={i} className="mb-2 flex gap-2">
-            <input className="w-14 rounded-lg bg-neutral-900 px-3 py-2 text-xs" placeholder="ch"
-              inputMode="numeric" value={m.channel}
-              onChange={(e) => setInput(i, { channel: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
-            <input className="flex-1 rounded-lg bg-neutral-900 px-3 py-2 text-xs" placeholder="fonte (bumbo, baixo DI, voz)"
-              value={m.source} onChange={(e) => setInput(i, { source: e.target.value })} />
-            <input className="flex-1 rounded-lg bg-neutral-900 px-3 py-2 text-xs" placeholder="mic/DI (SM57, DI ativo)"
-              value={m.mic} onChange={(e) => setInput(i, { mic: e.target.value })} />
-            <button onClick={() => setForm({ ...form, inputs: form.inputs.filter((_, n) => n !== i) })}
-              className="text-xs text-neutral-600 hover:text-red-400">✕</button>
-          </div>
-        ))}
-        <button onClick={() => setForm({ ...form, inputs: [...form.inputs, { channel: form.inputs.length + 1, source: "", mic: "" }] })}
-          className="text-xs text-emerald-400 hover:underline">+ canal</button>
-      </section>
-
-      {(["monitors", "backlineOwn", "backlineVenue", "hospitality", "notes"] as const).map((k) => (
-        <label key={k} className="mb-3 flex flex-col gap-1">
-          <span className="font-mono text-[10px] uppercase text-neutral-500">
-            {{ monitors: "monitoração", backlineOwn: "backline — banda leva", backlineVenue: "backline — casa fornece", hospitality: "camarim e hospitalidade", notes: "observações" }[k]}
-          </span>
-          <textarea className="rounded-xl bg-neutral-900 px-4 py-3 text-sm" rows={2}
-            value={form[k] ?? ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
-        </label>
-      ))}
-
-      <div className="flex gap-3">
-        <button disabled={!form.name || !form.members.length || busy}
+      <div className="sticky bottom-0 -mx-4 mt-6 flex flex-wrap items-center gap-2 border-t border-neutral-800/70 bg-neutral-950/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
+        <Button size="lg" disabled={!ok} loading={busy} onClick={async () => { setErr(null); try { await gen(); } catch { setErr("Não deu pra gerar o PDF agora. Tenta de novo."); } }}>
+          Gerar PDF
+        </Button>
+        <Button
+          size="lg"
+          variant="secondary"
+          disabled={!ok || busy}
           onClick={async () => {
-            const id = await upsert({ ...(form._id ? { id: form._id as any } : {}), profileId: profile._id, ...form });
-            setForm({ ...form, _id: id });
+            setErr(null);
+            try {
+              const id = await upsert({ ...(form._id ? { id: form._id as any } : {}), profileId: profile._id, ...payload() });
+              setForm({ ...form, _id: id as any });
+              setSaved(true);
+            } catch {
+              setErr("Não consegui salvar a formação. Confere a conexão e tenta de novo.");
+            }
           }}
-          className="flex-1 rounded-xl bg-neutral-800 px-4 py-3 text-sm disabled:opacity-40">
-          salvar formação
-        </button>
-        <button disabled={!form.name || !form.members.length || busy} onClick={gen}
-          className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black disabled:opacity-40">
-          {busy ? "gerando…" : "📄 gerar PDF do rider"}
-        </button>
+        >
+          {saved ? "Formação salva" : "Salvar formação"}
+        </Button>
+        {!ok && <span className="text-sm text-neutral-500">Dá um nome e pelo menos um instrumento.</span>}
         {form._id && (
-          <button onClick={async () => { await remove({ id: form._id as any }); setForm(EMPTY); }}
-            className="rounded-xl px-4 py-3 text-xs text-neutral-600 hover:text-red-400">rm</button>
+          <Button variant="ghost" className="ml-auto" onClick={async () => { await remove({ id: form._id as any }); setForm(EMPTY); setSaved(false); }}>
+            Apagar formação
+          </Button>
         )}
       </div>
-    </main>
+    </Page>
   );
 }

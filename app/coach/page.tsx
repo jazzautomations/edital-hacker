@@ -8,6 +8,7 @@ import VoiceSabatina from "@/components/VoiceSabatina";
 import { useAuthEmail } from "@/lib/useAuth";
 import { SignIn } from "@/components/SignIn";
 import { RichText } from "@/lib/format";
+import { Badge, Button, Textarea, dataCurta } from "@/components/ui";
 
 // O Coach — chat com memória total da carreira. É a promessa central:
 // um mentor que sabe teus cachês, teus leads, teus prazos e tuas sabatinas
@@ -120,89 +121,112 @@ export default function Coach() {
   };
 
   const stats = ctx
-    ? `${ctx.gigs?.length ?? 0} gigs · ${ctx.leads?.length ?? 0} leads · ${ctx.pipeline?.length ?? 0} no pipeline · ${ctx.sabatinas?.length ?? 0} sabatinas`
-    : "carregando memória…";
+    ? `${ctx.gigs?.length ?? 0} trabalhos, ${ctx.leads?.length ?? 0} contratantes, ${ctx.pipeline?.length ?? 0} editais e ${ctx.docs?.length ?? 0} documentos`
+    : "";
+
+  const g = gmail as { configured?: boolean; connected?: boolean; calendarConfigured?: boolean; calendar?: boolean };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-6 sm:px-6">
+    <main className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-3xl flex-col px-4 pt-6 sm:px-6 sm:pt-8">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-4xl sm:text-5xl text-neutral-50">O Coach</h1>
-          <p className="font-mono text-[10px] text-neutral-500">memória: {stats}</p>
+          <h1 className="text-4xl text-neutral-50 sm:text-5xl">Teu coach</h1>
+          <p className="mt-2 text-sm text-neutral-400">
+            {ctx ? `Lembra de ${stats}.` : "Carregando o que ele sabe da tua carreira."}
+          </p>
         </div>
-        <div className="flex gap-3 text-xs">
-          {gmail.configured && (
-            gmail.connected ? (
-              <span className="text-emerald-400">✓ gmail</span>
-            ) : (
-              <button onClick={() => connectGmail("initiate")} className="text-amber-400 hover:underline">
-                conectar gmail
-              </button>
-            )
-          )}
-          {(gmail as any).calendarConfigured && (
-            (gmail as any).calendar ? (
-              <span className="text-emerald-400">✓ agenda</span>
-            ) : (
-              <button onClick={() => connectGmail("initiate_calendar")} className="text-amber-400 hover:underline">
-                conectar agenda
-              </button>
-            )
-          )}
-          <Link href="/agenda" className="text-emerald-400 hover:underline">agenda</Link>
-          <Link href="/prospeccao" className="text-emerald-400 hover:underline">prospecção</Link>
-          <Link href="/rider" className="text-emerald-400 hover:underline">rider</Link>
-        </div>
-      </header>
-
-      <VoiceSabatina mode="coach" profileEmail={profile.email} />
-
-      <Briefing profileId={profile._id} ctx={ctx} />
-
-      <ActivityFeed profileId={profile._id} />
-
-      <div className="mb-4 mt-4 flex-1 overflow-y-auto rounded-2xl border border-neutral-800 p-4">
-        {msgs.length === 0 && (
-          <div className="flex h-full flex-col justify-center gap-4">
-            <p className="text-center text-sm text-neutral-400">
-              Salve, {profile.name.split(" ")[0]}. Eu sei onde tu tá na carreira — pergunta qualquer coisa.
-            </p>
-            <div className="grid grid-cols-1 gap-2">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => send(s)}
-                  className="rounded-xl border border-neutral-800 px-4 py-3 text-left text-sm text-neutral-300 hover:border-emerald-500/50">
-                  {s}
-                </button>
+        {(g.configured || g.calendarConfigured) && (
+          <div className="flex flex-wrap gap-2">
+            {g.configured &&
+              (g.connected ? (
+                <Badge tone="good">Gmail conectado</Badge>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={() => connectGmail("initiate")}>Conectar Gmail</Button>
               ))}
-            </div>
+            {g.calendarConfigured &&
+              (g.calendar ? (
+                <Badge tone="good">Agenda Google conectada</Badge>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={() => connectGmail("initiate_calendar")}>Conectar Google Agenda</Button>
+              ))}
           </div>
         )}
-        {msgs.map((m, i) => (
-          <div key={i} className={`mb-3 flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              m.role === "user" ? "bg-emerald-400 text-neutral-950" : "border border-neutral-800 bg-neutral-900 text-neutral-200"
-            }`}>
-              {m.role === "assistant" && <p className="mb-1 font-mono text-[9px] uppercase text-emerald-500">coach</p>}
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-4" aria-live="polite">
+        <VoiceSabatina mode="coach" profileEmail={profile.email} />
+        <Briefing profileId={profile._id} ctx={ctx} />
+        <ActivityFeed profileId={profile._id} />
+
+        <div className="mt-5 flex flex-1 flex-col gap-3">
+          {msgs.length === 0 && (
+            <div className="my-auto flex flex-col gap-4 py-6">
+              <p className="text-center text-base text-neutral-300">
+                Fala, {profile.name.split(" ")[0]}. Pede em português normal que eu faço:
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {SUGGESTIONS.map((sug) => (
+                  <button
+                    key={sug}
+                    onClick={() => send(sug)}
+                    className="rounded-2xl border border-neutral-800 bg-neutral-900/50 px-4 py-3.5 text-left text-sm leading-relaxed text-neutral-200 hover:border-emerald-500/50 hover:bg-neutral-900"
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {msgs.map((m, i) => (
+            <div
+              key={i}
+              className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                m.role === "user" ? "self-end bg-emerald-400 text-neutral-950" : "self-start border border-neutral-800 bg-neutral-900 text-neutral-200"
+              }`}
+            >
               <p className="whitespace-pre-wrap">{m.role === "assistant" ? <RichText text={m.text} /> : m.text}</p>
               {m.actions?.length ? (
-                <p className="mt-2 border-t border-neutral-700/60 pt-2 font-mono text-[10px] text-emerald-400">
-                  ⚙️ executou: {m.actions.map((a) => ACTION_LABEL[a] ?? a).join(" · ")}
+                <p className="mt-2.5 flex flex-wrap gap-1.5 border-t border-neutral-800 pt-2.5">
+                  {m.actions.map((act, n) => (
+                    <Badge key={n} tone="good">{ACTION_LABEL[act] ?? act}</Badge>
+                  ))}
                 </p>
               ) : null}
             </div>
-          </div>
-        ))}
-        {busy && <p className="text-xs text-neutral-500">o coach tá trabalhando…</p>}
-        <div ref={bottom} />
+          ))}
+          {busy && (
+            <div className="flex items-center gap-2 self-start rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-400">
+              <span className="flex gap-1" aria-hidden>
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500 [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500 [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500" />
+              </span>
+              Trabalhando nisso
+            </div>
+          )}
+          <div ref={bottom} />
+        </div>
       </div>
 
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-        <input className="flex-1 rounded-xl bg-neutral-900 px-4 py-3 text-sm" placeholder="fala com teu coach…"
-          value={input} onChange={(e) => setInput(e.target.value)} />
-        <button disabled={busy || !input.trim()}
-          className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-black disabled:opacity-40">
-          →
-        </button>
+      <form className="flex items-end gap-2 border-t border-neutral-800/70 py-3" onSubmit={(e) => { e.preventDefault(); send(input); }}>
+        <label className="sr-only" htmlFor="msg-coach">Mensagem pro coach</label>
+        <Textarea
+          id="msg-coach"
+          rows={1}
+          className="max-h-36 !min-h-11 flex-1 resize-none"
+          placeholder="Ex.: anota que sexta toco no Bar do Zé por R$ 1.500"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
+        <Button type="submit" size="lg" className="h-11" disabled={busy || !input.trim()}>
+          Enviar
+        </Button>
       </form>
     </main>
   );
@@ -223,42 +247,42 @@ function Briefing({ profileId, ctx }: { profileId: string; ctx: any }) {
   const items: { icon: string; text: string; href?: string; tone: string }[] = [];
 
   for (const p of pending ?? [])
-    items.push({ icon: "📬", text: `proposta: ${p.label}`, href: "/prospeccao", tone: "text-violet-300" });
+    items.push({ icon: "", text: `Sugestão esperando tua decisão: ${p.label}`, href: "/prospeccao", tone: "text-violet-300" });
 
   for (const i of ctx.pipeline ?? []) {
     const d = inDays(i.opportunity?.registrationTo);
     if (d !== null && d >= 0 && d <= 7 && i.stage !== "inscrito" && i.stage !== "resultado")
-      items.push({ icon: "⏰", text: `${i.opportunity?.name} fecha em ${d}d`, href: "/pipeline", tone: "text-amber-300" });
+      items.push({ icon: "⏰", text: `Inscrição fechando em ${d === 0 ? "hoje" : d === 1 ? "1 dia" : `${d} dias`}: ${i.opportunity?.name}`, href: "/pipeline", tone: "text-amber-300" });
   }
 
   for (const d of ctx.docs ?? []) {
     const dd = inDays(d.expiresAt);
     if (dd !== null && dd <= 30)
-      items.push({ icon: "📄", text: dd < 0 ? `${d.name} VENCEU` : `${d.name} vence em ${dd}d`, href: "/agenda", tone: dd < 0 ? "text-red-400" : "text-amber-300" });
+      items.push({ icon: "📄", text: dd < 0 ? `Documento vencido: ${d.name}` : `${d.name} vence em ${dd} dias`, href: "/documentos", tone: dd < 0 ? "text-red-400" : "text-amber-300" });
   }
 
   for (const g of ctx.gigs ?? []) {
     const d = inDays(g.date);
     if (d !== null && d >= 0 && d <= 7)
-      items.push({ icon: "🎤", text: `${g.title} — ${g.date.slice(5)}${g.fee ? ` · R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`, href: "/agenda", tone: "text-sky-300" });
+      items.push({ icon: "🎤", text: `${dataCurta(g.date)}: ${g.title}${g.fee ? `, R$ ${g.fee.toLocaleString("pt-BR")}` : ""}`, href: "/agenda", tone: "text-sky-300" });
     if (g.status === "feito" && d !== null && d < 0)
-      items.push({ icon: "💸", text: `${g.title} rolou e R$ ${g.fee?.toLocaleString("pt-BR") ?? "—"} não consta pago — cobra`, href: "/agenda", tone: "text-red-300" });
+      items.push({ icon: "💸", text: `Cobrar: ${g.title} já aconteceu e o cachê${g.fee ? ` de R$ ${g.fee.toLocaleString("pt-BR")}` : ""} ainda não entrou`, href: "/agenda", tone: "text-red-300" });
     if (g.status === "feito" && d !== null && d >= -2)
-      items.push({ icon: "🎵", text: `${g.title}: roteiro ECAD vence em ~48h úteis — sem ele a verba vai pra outros autores`, href: "/agenda", tone: "text-amber-300" });
+      items.push({ icon: "🎵", text: `Entregar o roteiro ECAD de ${g.title} em até 48h úteis, senão o direito autoral vai pra outros autores`, href: "/agenda", tone: "text-amber-300" });
   }
 
   if (!items.length) return null;
   return (
-    <div className="mt-3 rounded-xl border border-neutral-800 p-3 text-xs">
-      <p className="mb-2 font-semibold text-neutral-300">☀️ enquanto você dormia ({items.length})</p>
-      <ul className="flex flex-col gap-1.5">
-        {items.slice(0, 8).map((it, i) => (
-          <li key={i} className={it.tone}>
-            {it.icon} {it.href ? <Link href={it.href} className="hover:underline">{it.text}</Link> : it.text}
+    <section className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 text-sm">
+      <h2 className="mb-2.5 font-semibold text-neutral-100">Pra resolver agora ({items.length})</h2>
+      <ul className="flex flex-col gap-2">
+        {items.slice(0, 6).map((it, i) => (
+          <li key={i} className={`leading-relaxed ${it.tone}`}>
+            {it.href ? <Link href={it.href} className="underline decoration-current/30 underline-offset-2 hover:decoration-current">{it.text}</Link> : it.text}
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }
 
@@ -269,20 +293,19 @@ function ActivityFeed({ profileId }: { profileId: string }) {
     | undefined;
   if (!items?.length) return null;
   return (
-    <details className="mt-3 rounded-xl border border-neutral-800 p-3 text-xs">
-      <summary className="cursor-pointer font-semibold text-neutral-300">
-        ⚡ diário do Manager — o que ele já fez ({items.length})
+    <details className="mt-3 rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4 text-sm">
+      <summary className="cursor-pointer font-semibold text-neutral-100">
+        O que o coach já fez por você ({items.length})
       </summary>
-      <ul className="mt-2 flex flex-col gap-1.5">
-        {items.slice(0, 8).map((a) => (
-          <li key={a._id} className="flex items-baseline gap-2">
-            <span className={a.result === "erro" ? "text-red-400" : a.result === "proposta" ? "text-violet-400" : "text-emerald-400"}>
-              {a.result === "erro" ? "✗" : a.result === "proposta" ? "◈" : "✓"}
+      <ul className="mt-3 flex flex-col gap-2">
+        {items.slice(0, 10).map((a) => (
+          <li key={a._id} className="flex items-baseline gap-2.5">
+            <span aria-hidden className={a.result === "erro" ? "text-red-400" : "text-emerald-400"}>
+              {a.result === "erro" ? "✕" : "✓"}
             </span>
-            <span className="text-neutral-300">{a.verb}</span>
-            <span className="truncate text-neutral-600">{a.detail}</span>
-            <span className="ml-auto shrink-0 text-neutral-700">
-              {new Date(a.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+            <span className="text-neutral-200">{a.verb}</span>
+            <span className="ml-auto shrink-0 text-xs text-neutral-500">
+              {new Date(a.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
             </span>
           </li>
         ))}

@@ -1,4 +1,58 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { url: "/" },
+};
+
+const faq: Array<[string, string]> = [
+  [
+    "O Manager escreve o projeto do edital por mim?",
+    "Não. Ele acha os editais que te aceitam, te entrevista como a banca faria e mostra o que falta. A proposta continua sendo tua, que é o que a banca quer ler.",
+  ],
+  [
+    "Quanto custa?",
+    "O radar de editais e a primeira sabatina são grátis. Depois, R$ 9,90 por edital no Pix, ou plano a partir de R$ 39,90 por mês no anual. Não cobramos comissão sobre cachê nem sobre recurso aprovado.",
+  ],
+  [
+    "De onde vêm os editais?",
+    "De portais públicos de cultura: Mapas Culturais federal, estaduais e municipais, e o portal nacional de contratações públicas. O radar varre as fontes todo dia e cada edital tem o link pro original.",
+  ],
+  [
+    "Serve pra quem não é músico?",
+    "Serve. Teatro, dança, audiovisual, artes visuais, literatura, circo, cultura popular, produção e técnica. No cadastro você marca tua área e o radar passa a ordenar por ela.",
+  ],
+  [
+    "Meus documentos ficam seguros?",
+    "Ficam guardados só na tua conta, pra você anexar em edital e ser avisado antes de vencer. Você apaga quando quiser e a gente não compartilha com ninguém.",
+  ],
+];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      name: "Manager",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      inLanguage: "pt-BR",
+      offers: [
+        { "@type": "Offer", name: "Grátis", price: "0", priceCurrency: "BRL" },
+        { "@type": "Offer", name: "Sabatina avulsa", price: "9.90", priceCurrency: "BRL" },
+        { "@type": "Offer", name: "Manager mensal", price: "49.90", priceCurrency: "BRL" },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+    },
+  ],
+};
 
 const stats: Array<[string, string]> = [
   [
@@ -101,6 +155,7 @@ function VerdictPreview() {
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-4 pb-24 pt-12 sm:px-6 sm:pt-20">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       {/* hero */}
       <section className="grid items-center gap-12 lg:grid-cols-[1.15fr_1fr]">
         <div className="flex flex-col gap-6">
@@ -195,6 +250,25 @@ export default function Home() {
             >
               {label}
             </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* perguntas */}
+      <section className="grid gap-10 lg:grid-cols-[1fr_1.6fr]">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-emerald-400">antes de começar</p>
+          <h2 className="mt-3 font-display text-4xl leading-tight text-neutral-50 sm:text-5xl">Perguntas que todo artista faz.</h2>
+        </div>
+        <div className="flex flex-col divide-y divide-neutral-800 border-y border-neutral-800">
+          {faq.map(([q, a]) => (
+            <details key={q} className="group py-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold text-neutral-50 [&::-webkit-details-marker]:hidden">
+                {q}
+                <span aria-hidden className="text-2xl font-normal text-neutral-500 transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-3 max-w-2xl leading-relaxed text-neutral-400">{a}</p>
+            </details>
           ))}
         </div>
       </section>
