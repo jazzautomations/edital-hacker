@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
 
 const APP_LINKS = [
@@ -26,12 +28,14 @@ const PUBLIC_LINKS = [
 
 export function AppNav() {
   const path = usePathname() ?? "/";
-  const { email, ready } = useAuthEmail();
+  const { email, token, ready, signOut } = useAuthEmail();
+  const deleteAccount = useMutation(api.profiles.deleteAccount);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const logged = ready && /^\S+@\S+\.\S+$/.test(email);
+  const logged = ready && Boolean(email);
 
-  useEffect(() => setMenu(false), [path]);
+  useEffect(() => { setMenu(false); setConfirmDelete(false); }, [path]);
   useEffect(() => {
     if (!menu) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
@@ -52,10 +56,14 @@ export function AppNav() {
     path === href || path.startsWith(href + "/") || (href === "/oportunidades" && path.startsWith("/sabatina"));
   const links = logged ? APP_LINKS : PUBLIC_LINKS;
 
-  function sair() {
-    try {
-      localStorage.removeItem("manager_email");
-    } catch {}
+  async function sair() {
+    await signOut();
+    window.location.href = "/sair";
+  }
+
+  async function apagarConta() {
+    await deleteAccount({ token }).catch(() => {});
+    await signOut();
     window.location.href = "/sair";
   }
 
@@ -117,6 +125,25 @@ export function AppNav() {
                 <button onClick={sair} role="menuitem" className="block w-full rounded-xl px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800">
                   Sair
                 </button>
+                <div className="mt-1 border-t border-neutral-800 pt-1">
+                  {confirmDelete ? (
+                    <div className="px-3 py-2">
+                      <p className="text-xs leading-relaxed text-neutral-400">Apaga perfil, documentos e todo o histórico. Não tem volta.</p>
+                      <div className="mt-2 flex gap-2">
+                        <button onClick={apagarConta} className="rounded-full border border-red-500/50 px-3 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10">
+                          Apagar tudo
+                        </button>
+                        <button onClick={() => setConfirmDelete(false)} className="rounded-full px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDelete(true)} role="menuitem" className="block w-full rounded-xl px-3 py-2 text-left text-sm text-neutral-500 hover:bg-neutral-800 hover:text-red-300">
+                      Apagar minha conta
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

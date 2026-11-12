@@ -1,28 +1,32 @@
 "use client";
 
+import { ConvexHttpClient } from "convex/browser";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { api } from "@/convex/_generated/api";
 
 export type AuthState = {
+  /** e-mail confirmado da sessão ("" = ninguém logado) */
   email: string;
-  setEmail: (e: string) => void;
-  /** true = sessão WorkOS verificada (não pode trocar de email digitando) */
-  locked: boolean;
+  /** token da sessão; é o que prova quem você é pro servidor */
+  token: string;
+  /** guarda a sessão depois que o código do e-mail (ou o WorkOS) confirmou */
+  setSession: (token: string, email: string) => void;
+  signOut: () => Promise<void>;
   /** true = WORKOS_CLIENT_ID configurado no servidor */
   authEnabled: boolean;
+  /** true = sessão veio do WorkOS */
+  locked: boolean;
   ready: boolean;
 };
 
-// Ponte sessão WorkOS ↔ perfil: com o provedor ativo, o email vem verificado da
-// sessão; sem ele, vale o email guardado no navegador (localStorage).
-//
-// Estado ÚNICO compartilhado: menu, página e formulário de entrada leem a mesma
-// fonte. Antes cada um tinha a sua cópia e o menu só percebia o login depois de
-// recarregar — além de cada componente bater em /api/session por conta própria.
+// Estado ÚNICO da sessão, compartilhado por menu, páginas e formulário de
+// entrada. O e-mail só aparece aqui depois de confirmado pelo servidor: o que
+// fica no navegador é um token, e digitar o e-mail de outra pessoa não abre nada.
 
-type Snapshot = { email: string; locked: boolean; authEnabled: boolean; ready: boolean };
+type Snapshot = { email: string; token: string; authEnabled: boolean; locked: boolean; ready: boolean };
 
-const KEY = "manager_email";
-const SERVER: Snapshot = { email: "", locked: false, authEnabled: false, ready: false };
+const KEY = "manager_session";
+const SERVER: Snapshot = { email: "", token: "", authEnabled: false, locked: false, ready: false };
 let state: Snapshot = SERVER;
 let started = false;
 const listeners = new Set<() => void>();
@@ -32,37 +36,61 @@ function set(patch: Partial<Snapshot>) {
   listeners.forEach((l) => l());
 }
 
-function readStored(): string {
+function client() {
+  return new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+}
+
+function stored(): string {
   try {
-    return (localStorage.getItem(KEY) ?? "").trim().toLowerCase();
+    return localStorage.getItem(KEY) ?? "";
   } catch {
     return "";
   }
 }
 
-function start() {
+function save(token: string) {
+  try {
+    if (token) localStorage.setItem(KEY, token);
+    else localStorage.removeItem(KEY);
+    localStorage.removeItem("manager_email"); // formato antigo, sem verificação
+  } catch {}
+}
+
+async function start() {
   if (started || typeof window === "undefined") return;
   started = true;
-  set({ email: readStored() });
-  fetch("/api/session")
-    .then((r) => (r.ok ? r.json() : null))
-    .then((s) => {
-      if (s?.auth) {
-        const verified = typeof s.email === "string" && s.email ? s.email.toLowerCase() : "";
-        if (verified) {
-          try {
-            localStorage.setItem(KEY, verified);
-          } catch {}
-        }
-        set({ authEnabled: true, locked: Boolean(verified), email: verified || state.email, ready: true });
-      } else {
-        set({ ready: true });
+
+  // 1) login por conta (WorkOS): o servidor confirma e já entrega uma sessão
+  let authEnabled = false;
+  try {
+    const r = await fetch("/api/session");
+    const s = r.ok ? await r.json() : null;
+    authEnabled = Boolean(s?.auth);
+    if (s?.token && s?.email) {
+      save(s.token);
+      set({ token: s.token, email: s.email, authEnabled, locked: true, ready: true });
+      return;
+    }
+  } catch {}
+
+  // 2) sessão guardada de um login por código: confere se ainda vale
+  const token = stored();
+  if (token) {
+    try {
+      const me = await client().query(api.auth.me, { token });
+      if (me?.email) {
+        set({ token, email: me.email, authEnabled, ready: true });
+        return;
       }
-    })
-    .catch(() => set({ ready: true }));
-  // outra aba entrou ou saiu
+      save("");
+    } catch {
+      // sem rede: mantém o token pra tentar de novo depois, mas não libera nada
+    }
+  }
+  set({ authEnabled, ready: true });
+
   window.addEventListener("storage", (e) => {
-    if (e.key === KEY && !state.locked) set({ email: (e.newValue ?? "").trim().toLowerCase() });
+    if (e.key === KEY && e.newValue !== state.token) window.location.reload();
   });
 }
 
@@ -75,17 +103,21 @@ function subscribe(cb: () => void) {
 
 export function useAuthEmail(): AuthState {
   const snap = useSyncExternalStore(subscribe, () => state, () => SERVER);
-  useEffect(start, []);
-
-  const setEmail = useCallback((e: string) => {
-    if (state.locked) return;
-    const v = e.trim().toLowerCase();
-    try {
-      if (v) localStorage.setItem(KEY, v);
-      else localStorage.removeItem(KEY);
-    } catch {}
-    set({ email: v });
+  useEffect(() => {
+    void start();
   }, []);
 
-  return { ...snap, setEmail };
+  const setSession = useCallback((token: string, email: string) => {
+    save(token);
+    set({ token, email: email.trim().toLowerCase(), ready: true });
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const token = state.token;
+    save("");
+    set({ token: "", email: "", locked: false });
+    if (token) await client().mutation(api.auth.signOut, { token }).catch(() => {});
+  }, []);
+
+  return { ...snap, setSession, signOut };
 }

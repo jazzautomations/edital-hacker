@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import type { Profile } from "@/lib/types";
-import { Button, Field, Input, LinkButton, Select, Skeleton } from "@/components/ui";
+import { EmailCodeForm } from "@/components/EmailCodeForm";
+import { Button, Field, Input, Select, Skeleton } from "@/components/ui";
 
 const PERSON_TYPES = [
   { id: "Pessoa Física", title: "Pessoa física", hint: "Me inscrevo com meu CPF" },
@@ -73,14 +75,12 @@ function Onboarding() {
   const router = useRouter();
   const params = useSearchParams();
   const back = params.get("voltar");
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const hasEmail = /^\S+@\S+\.\S+$/.test(email);
-  const profile = useQuery(api.profiles.getByEmail, hasEmail ? { email } : "skip") as Profile | null | undefined;
+  const { email, token, ready } = useAuthEmail();
+  const hasEmail = Boolean(email);
+  const profile = useMyProfile();
   const upsert = useMutation(api.profiles.upsert);
 
   const [step, setStep] = useState(0);
-  const [draftEmail, setDraftEmail] = useState("");
-  const [emailErr, setEmailErr] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [personType, setPersonType] = useState("Pessoa Física");
   const [areas, setAreas] = useState<string[]>([]);
@@ -124,7 +124,7 @@ function Onboarding() {
     setErr(null);
     try {
       await upsert({
-        email,
+        token,
         name: name.trim(),
         personType,
         artAreas: Array.from(new Set(allAreas)),
@@ -160,46 +160,7 @@ function Onboarding() {
           Com ele o Manager filtra só os editais que te aceitam e prepara a banca pro teu caso.
         </p>
         <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-neutral-800 bg-neutral-900/50 p-5">
-          {authEnabled && !locked && (
-            <>
-              <LinkButton href="/login" variant="secondary" size="lg" className="w-full !bg-neutral-100 !text-neutral-950 hover:!bg-white">
-                Entrar com Google ou conta
-              </LinkButton>
-              <div className="flex items-center gap-3 text-xs text-neutral-500">
-                <span className="h-px flex-1 bg-neutral-800" />
-                ou só com teu e-mail
-                <span className="h-px flex-1 bg-neutral-800" />
-              </div>
-            </>
-          )}
-          <form
-            noValidate
-            className="flex flex-col gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const v = draftEmail.trim().toLowerCase();
-              if (!/^\S+@\S+\.\S+$/.test(v)) {
-                setEmailErr("Esse e-mail não parece certo. Confere e tenta de novo.");
-                return;
-              }
-              setEmailErr(null);
-              setEmail(v);
-            }}
-          >
-            <Field label="Teu e-mail" error={emailErr} hint="É por ele que você volta pro teu painel.">
-              <Input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="voce@email.com"
-                value={draftEmail}
-                onChange={(e) => setDraftEmail(e.target.value)}
-              />
-            </Field>
-            <Button type="submit" size="lg">
-              Começar
-            </Button>
-          </form>
+          <EmailCodeForm cta="Começar" hint="Mando um código de 6 números pra confirmar que o e-mail é teu." />
         </div>
       </main>
     );

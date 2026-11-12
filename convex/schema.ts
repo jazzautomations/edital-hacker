@@ -58,6 +58,24 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
+  // Código de entrada enviado por e-mail (só o hash) e sessões abertas.
+  loginCodes: defineTable({
+    email: v.string(),
+    codeHash: v.string(),
+    attempts: v.number(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_email", ["email"]),
+
+  sessions: defineTable({
+    email: v.string(),
+    tokenHash: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["tokenHash"])
+    .index("by_email", ["email"]),
+
   pipelineItems: defineTable({
     profileId: v.id("profiles"),
     opportunityId: v.id("opportunities"),

@@ -13,11 +13,13 @@ type Gig = { _id: string; title: string; venue?: string; date: string; status: s
 
 function EpkInner() {
   const email = useSearchParams().get("email") ?? "";
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
-  const gigs = useQuery(
-    api.gigs.listForProfile,
-    profile ? { profileId: profile._id } : "skip"
-  ) as Gig[] | undefined;
+  // página pública: o servidor entrega só o que é pra contratante ver
+  const epk = useQuery(api.profiles.publicEpk, email ? { email } : "skip") as
+    | { profile: any; gigs: Gig[] }
+    | null
+    | undefined;
+  const profile = epk === undefined ? undefined : (epk?.profile ?? null);
+  const gigs = epk?.gigs;
 
   if (!email) {
     return (

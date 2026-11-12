@@ -35,20 +35,21 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { opportunityId, profileEmail, mode = "sabatina" } = body as {
+  const { opportunityId, token, mode = "sabatina" } = body as {
     opportunityId?: string;
-    profileEmail: string;
+    token: string;
     mode?: "sabatina" | "coach";
   };
-  if (!profileEmail || (mode === "sabatina" && !opportunityId)) {
-    return NextResponse.json({ error: "profileEmail (+ opportunityId no modo sabatina) required" }, { status: 400 });
+  if (!token || (mode === "sabatina" && !opportunityId)) {
+    return NextResponse.json({ error: "token (+ opportunityId no modo sabatina) required" }, { status: 400 });
   }
 
   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-  const profile = (await convex.query(api.profiles.getByEmail, { email: profileEmail })) as any;
+  const profile = (await convex.query(api.profiles.me, { token })) as any;
   if (!profile) {
-    return NextResponse.json({ error: "profile not found" }, { status: 404 });
+    return NextResponse.json({ error: "sessão inválida" }, { status: 401 });
   }
+  const profileEmail: string = profile.email;
 
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   let system: string;

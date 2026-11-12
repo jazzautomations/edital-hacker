@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   if (senderEmail === userId.toLowerCase()) return NextResponse.json({ ok: true, skipped: "own email" });
 
   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-  const profile = (await convex.query(api.profiles.getByEmail, { email: userId })) as any;
+  const profile = (await convex.query(api.profiles.getByEmail, { email: userId, secret: process.env.NOTIFY_SECRET ?? "" })) as any;
   if (!profile) return NextResponse.json({ ok: true, skipped: "unknown user" });
 
   const leads = (await convex.query(api.leads.listForProfile, { profileId: profile._id })) as any[];

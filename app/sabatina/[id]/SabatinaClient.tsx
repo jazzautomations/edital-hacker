@@ -10,6 +10,7 @@ import type { SabatinaContext, ChatTurn } from "@/lib/llm";
 import { RichText } from "@/lib/format";
 import { prazoConfiavel, valorConfiavel, viewOf } from "@/lib/opp";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import VoiceSabatina from "@/components/VoiceSabatina";
 import { Badge, Button, Card, Field, Input, LinkButton, Notice, Page, Select, Skeleton, Textarea, brl, dataCurta, diasAte } from "@/components/ui";
 
@@ -37,7 +38,7 @@ export default function Sabatina({ params }: { params: Promise<{ id: string }> }
   const opp = useQuery(api.opportunities.get, { id: oppId }) as Opportunity | null | undefined;
 
   const { email, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const profile = useMyProfile();
   const planStatus = useQuery(api.billing.planStatus, profile ? { profileId: profile._id as any } : "skip") as
     | { plan: string; unlockedOpportunityIds: string[]; sabatinaCount: number }
     | undefined;

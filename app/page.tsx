@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_URL, og } from "@/lib/site";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  openGraph: { url: "/" },
+  openGraph: og("Manager: editais de cultura, shows e cachês num lugar só", SITE_DESCRIPTION, "/"),
 };
 
 const faq: Array<[string, string]> = [

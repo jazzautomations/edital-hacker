@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import VoiceSabatina from "@/components/VoiceSabatina";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { SignIn } from "@/components/SignIn";
 import { RichText } from "@/lib/format";
 import { Badge, Button, Textarea, dataCurta } from "@/components/ui";
@@ -37,8 +38,8 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 export default function Coach() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile() as any;
   const ctx = useQuery(
     api.riders.coachContext,
     profile ? { profileId: profile._id } : "skip"
@@ -55,18 +56,18 @@ export default function Coach() {
     fetch("/api/email-connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: profile.email }),
+      body: JSON.stringify({ token }),
     })
       .then((r) => r.json())
       .then(setGmail)
       .catch(() => {});
-  }, [profile?.email]);
+  }, [profile?.email, token]);
 
   const connectGmail = async (action = "initiate") => {
     const r = await fetch("/api/email-connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: profile.email, action }),
+      body: JSON.stringify({ token, action }),
     });
     const d = await r.json();
     if (d.redirectUrl) window.location.href = d.redirectUrl;
@@ -88,11 +89,6 @@ export default function Coach() {
       <SignIn
         title="Teu coach"
         blurb="O manager que lembra de tudo: cachês, leads, prazos e sabatinas."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );
@@ -108,7 +104,7 @@ export default function Coach() {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileEmail: profile.email, message: msg }),
+        body: JSON.stringify({ token, message: msg }),
       });
       const data = await res.json();
       setMsgs((m) => [

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   }
 
   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-  const profile = (await convex.query(api.profiles.getByEmail, { email })) as any;
+  const profile = (await convex.query(api.profiles.getByEmail, { email, secret: process.env.NOTIFY_SECRET ?? "" })) as any;
   if (!profile) return NextResponse.json({ error: "profile not found" }, { status: 404 });
 
   const verdict = {

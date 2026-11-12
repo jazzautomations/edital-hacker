@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 import { calendarConfigured, calendarStatus, composioConfigured, enableGmailTrigger, gmailStatus, linkCalendar, linkGmail } from "@/lib/composio";
 
 // Conexão Gmail via Composio OAuth managed. O artista clica "Conectar Gmail"
 // → devolvemos a redirect_url → ele autoriza → volta com callback.
 
 export async function POST(req: Request) {
-  const { email, action = "status" } = (await req.json()) as { email: string; action?: string };
-  if (!email) return NextResponse.json({ error: "email required" }, { status: 400 });
+  const { token, action = "status" } = (await req.json()) as { token: string; action?: string };
+  if (!token) return NextResponse.json({ error: "token required" }, { status: 400 });
+  // o e-mail vem da sessão: ninguém consulta nem conecta a caixa de outra pessoa
+  const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+  const me = (await convex.query(api.auth.me, { token })) as { email: string } | null;
+  if (!me) return NextResponse.json({ error: "sessão inválida" }, { status: 401 });
+  const email = me.email;
   if (!composioConfigured()) {
     return NextResponse.json({ configured: false, connected: false });
   }

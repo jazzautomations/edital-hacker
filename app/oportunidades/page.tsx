@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { personTypeMatches, type Opportunity, type Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { AREA_OPTIONS, areasOf, fitOf, prazoConfiavel, tipo, valorConfiavel, viewOf } from "@/lib/opp";
 import { Badge, Button, EmptyState, Input, LinkButton, Page, PageHeader, Select, Skeleton, brl, dataCurta, diasAte } from "@/components/ui";
 
@@ -14,7 +15,7 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 
 export default function Oportunidades() {
   const { email, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const profile = useMyProfile();
   const opps = useQuery(api.opportunities.list, { limit: 400 }) as Opportunity[] | undefined;
   const pipeline = useQuery(api.pipeline.listForProfile, profile ? { profileId: profile._id as any } : "skip") as
     | { opportunityId: string }[]

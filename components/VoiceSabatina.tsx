@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuthEmail } from "@/lib/useAuth";
 import type {
   IAgoraRTCClient,
   IMicrophoneAudioTrack,
@@ -31,6 +32,7 @@ export default function VoiceSabatina({
   profileEmail: string;
   mode?: "sabatina" | "coach";
 }) {
+  const { token } = useAuthEmail();
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [agentOn, setAgentOn] = useState(false);
@@ -75,7 +77,7 @@ export default function VoiceSabatina({
       const res = await fetch("/api/voice-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opportunityId, profileEmail, mode }),
+        body: JSON.stringify({ opportunityId, token, mode }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import type { Opportunity, Profile } from "@/lib/types";
 import { tidyTitle } from "@/lib/format";
 import { fitOf, prazoConfiavel, viewOf } from "@/lib/opp";
@@ -38,8 +39,8 @@ function Stat({ label, value, hint, href, tone }: { label: string; value: string
 }
 
 export default function Inicio() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile();
   const ctx = useQuery(api.riders.coachContext, profile ? { profileId: profile._id as any } : "skip") as Ctx | undefined;
   const opps = useQuery(api.opportunities.list, profile ? { limit: 60 } : "skip") as Opportunity[] | undefined;
   const [welcome, setWelcome] = useState(false);
@@ -57,11 +58,6 @@ export default function Inicio() {
     return (
       <SignIn
         title="Teu painel"
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

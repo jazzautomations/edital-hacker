@@ -8,6 +8,7 @@ import type { Profile } from "@/lib/types";
 import { calcCachet } from "@/lib/cachet";
 import { ruleFor } from "@/lib/docRules";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { SignIn } from "@/components/SignIn";
 import { Badge, Button, Card, EmptyState, Field, Input, LinkButton, Page, PageHeader, SectionTitle, Skeleton, Textarea, brl, dataCurta } from "@/components/ui";
 
@@ -29,9 +30,8 @@ type Gig = {
 };
 
 export default function Agenda() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
-    | Profile | null | undefined;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile();
   const gigs = useQuery(
     api.gigs.listForProfile,
     profile ? { profileId: profile._id as any } : "skip"
@@ -107,11 +107,6 @@ export default function Agenda() {
       <SignIn
         title="Agenda e cachês"
         blurb="Shows, aulas e trabalhos com data, valor e o que já caiu na conta."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

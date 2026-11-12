@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
@@ -72,10 +73,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-100">
         <Providers>
-          <AppNav />
+          <Suspense fallback={<div className="h-14 border-b border-neutral-800/70" />}>
+            <AppNav />
+          </Suspense>
           <LoginNotice />
           <div id="conteudo" className="flex flex-1 flex-col">{children}</div>
-          <Footer />
+          <Suspense fallback={null}>
+            <Footer />
+          </Suspense>
         </Providers>
       </body>
     </html>

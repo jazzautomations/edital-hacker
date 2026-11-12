@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import type { Profile } from "@/lib/types";
 import { SignIn } from "@/components/SignIn";
 import {
@@ -62,8 +63,8 @@ function statusOf(d: Doc): { tone: "good" | "warn" | "bad" | "neutral"; text: st
 const kb = (n?: number) => (!n ? "" : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 export default function Documentos() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile();
   const docs = useQuery(api.documents.listForProfile, profile ? { profileId: profile._id as any } : "skip") as Doc[] | undefined;
   const genUrl = useMutation(api.documents.generateUploadUrl);
   const add = useMutation(api.documents.add);
@@ -89,11 +90,6 @@ export default function Documentos() {
       <SignIn
         title="Teus documentos"
         blurb="Certidões, portfólio e contratos num lugar só, com aviso antes de vencer."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

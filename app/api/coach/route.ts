@@ -8,17 +8,16 @@ export async function POST(req: Request) {
   if (!llmConfigured()) {
     return NextResponse.json({ error: "LLM_API_KEY not configured" }, { status: 503 });
   }
-  const { profileEmail, message } = (await req.json()) as {
-    profileEmail: string;
-    message: string;
-  };
-  if (!profileEmail || !message) {
-    return NextResponse.json({ error: "profileEmail + message required" }, { status: 400 });
+  const { token, message } = (await req.json()) as { token: string; message: string };
+  if (!token || !message) {
+    return NextResponse.json({ error: "token + message required" }, { status: 400 });
   }
 
   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-  const profile = (await convex.query(api.profiles.getByEmail, { email: profileEmail })) as any;
-  if (!profile) return NextResponse.json({ error: "profile not found" }, { status: 404 });
+  // a sessão diz quem é: ninguém conversa (nem executa ação) no perfil de outro
+  const profile = (await convex.query(api.profiles.me, { token })) as any;
+  if (!profile) return NextResponse.json({ error: "sessão inválida" }, { status: 401 });
+  const profileEmail: string = profile.email;
   const fullCtx = (await convex.query(api.riders.coachContext, { profileId: profile._id })) as any;
 
   const history = (fullCtx?.history ?? []).map((m: any) => ({

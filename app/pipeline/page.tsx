@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PipelineItem, Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { tidyTitle } from "@/lib/format";
 import { SignIn } from "@/components/SignIn";
 import { Badge, Button, Card, EmptyState, Field, Input, LinkButton, Page, PageHeader, SectionTitle, Skeleton, brl, diasAte } from "@/components/ui";
@@ -31,8 +32,8 @@ const STAGES: { key: string; label: string; hint: string }[] = [
 const ALL = [...STAGES, { key: "arquivado", label: "Arquivado", hint: "" }];
 
 export default function Pipeline() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile();
   const items = useQuery(api.pipeline.listForProfile, profile ? { profileId: profile._id as any } : "skip") as PipelineItem[] | undefined;
   const contacts = useQuery(api.contacts.listForProfile, profile ? { profileId: profile._id as any } : "skip") as Contact[] | undefined;
   const move = useMutation(api.pipeline.move);
@@ -47,11 +48,6 @@ export default function Pipeline() {
       <SignIn
         title="Teu pipeline"
         blurb="Editais e propostas num funil só, do interesse à prestação de contas."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

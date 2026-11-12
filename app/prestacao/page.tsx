@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { SignIn } from "@/components/SignIn";
 import { tidyTitle } from "@/lib/format";
 import { Button, Card, Field, Input, Notice, Page, PageHeader, SectionTitle, Select, Textarea } from "@/components/ui";
@@ -29,8 +30,8 @@ type Meta = { texto: string; status: "integral" | "parcial" | "nao"; justificati
 const DRAFT = "manager_prestacao_rascunho";
 
 export default function Prestacao() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile() as any;
   const items = useQuery(
     api.pipeline.listForProfile,
     profile ? { profileId: profile._id } : "skip"
@@ -72,11 +73,6 @@ export default function Prestacao() {
       <SignIn
         title="Prestação de contas"
         blurb="O relatório de execução do edital, no formato que a plataforma pede."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { SignIn } from "@/components/SignIn";
 import { RichText } from "@/lib/format";
 import { Button, Card, EmptyState, Field, Input, Notice, Page, PageHeader, SectionTitle, Select, Skeleton } from "@/components/ui";
@@ -65,9 +66,8 @@ type Lead = {
 };
 
 export default function Prospeccao() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as
-    | Profile | null | undefined;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile();
   const leads = useQuery(
     api.leads.listForProfile,
     profile ? { profileId: profile._id as any } : "skip"
@@ -153,11 +153,6 @@ export default function Prospeccao() {
       <SignIn
         title="Prospecção"
         blurb="O agente caça quem contrata você e monta teu funil comercial."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

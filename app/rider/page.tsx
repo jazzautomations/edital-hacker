@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { SignIn } from "@/components/SignIn";
 import { Button, Card, Field, Input, Notice, Page, PageHeader, SectionTitle, Textarea } from "@/components/ui";
 
@@ -25,8 +26,8 @@ const EMPTY: Rider = {
 };
 
 export default function RiderPage() {
-  const { email, setEmail, locked, authEnabled, ready } = useAuthEmail();
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as any;
+  const { email, token, ready } = useAuthEmail();
+  const profile = useMyProfile() as any;
   const riders = useQuery(
     api.riders.listForProfile,
     profile ? { profileId: profile._id } : "skip"
@@ -44,11 +45,6 @@ export default function RiderPage() {
       <SignIn
         title="Rider técnico"
         blurb="Mapa de palco, input list e camarim num PDF que o produtor respeita."
-        email={email}
-        setEmail={setEmail}
-        locked={locked}
-        authEnabled={authEnabled}
-        ready={ready}
         profile={profile}
       />
     );

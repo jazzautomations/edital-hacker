@@ -54,7 +54,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       <Suspense fallback={null}>
         <EditalHead params={params} />
       </Suspense>
-      <SabatinaClient params={params} />
+      <Suspense fallback={<main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6" aria-busy="true" />}>
+        <SabatinaClient params={params} />
+      </Suspense>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import type { Opportunity, Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { useMyProfile } from "@/lib/useProfile";
 import { tidyTitle } from "@/lib/format";
 import { Badge, Button, Card, Field, Input, LinkButton, Notice, Page, PageHeader } from "@/components/ui";
 
@@ -49,7 +50,7 @@ function Inner() {
   const [paid, setPaid] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const profile = useQuery(api.profiles.getByEmail, email ? { email } : "skip") as Profile | null | undefined;
+  const profile = useMyProfile();
   const opp = useQuery(api.opportunities.get, unlockOpp ? { id: unlockOpp as any } : "skip") as Opportunity | null | undefined;
   const plan = useQuery(api.billing.planStatus, profile ? { profileId: profile._id as any } : "skip") as
     | { plan: string; unlockedOpportunityIds: string[] }
