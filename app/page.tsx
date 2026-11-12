@@ -57,19 +57,19 @@ const jsonLd = {
 const stats: Array<[string, string]> = [
   [
     "R$ 15 bi",
-    "da PNAB descentralizados para estados e municípios — o dinheiro existe, falta quem ache",
+    "da Política Nacional Aldir Blanc repassados a estados e municípios. O dinheiro existe; falta achar o edital certo.",
   ],
   [
     "15h/mês",
-    "é o que um artista gasta caçando edital em portais espalhados — em vez de produzir",
+    "é o que um artista gasta procurando edital em portais espalhados, em vez de criar.",
   ],
   [
     "32%",
-    "dos trabalhadores da arte apontam “encontrar empresário” como a maior dificuldade da carreira",
+    "dos trabalhadores da arte dizem que achar empresário é a maior dificuldade da carreira.",
   ],
   [
     "150+",
-    "editais vivos no radar agora, de 13 fontes: Mapas federais, estaduais, PNCP e o long tail municipal do PNAB",
+    "editais abertos no radar agora, lidos de portais federais, estaduais e de prefeituras.",
   ],
 ];
 
@@ -77,30 +77,30 @@ const pillars = [
   {
     tag: "01 · base",
     title: "Radar de editais + sabatina de banca",
-    body: "O radar varre a rede federada e traz só o que combina com o seu perfil. Antes de inscrever, a sabatina te entrevista — projeto, repertório, orçamento — contra a rubrica real do edital e devolve um score de 0 a 100 com o que a banca vai questionar. Preparar, não escrever: a proposta continua sua.",
+    body: "O radar lê os portais de cultura todo dia e põe na frente o que combina com tua área e teu estado. Antes de inscrever, a sabatina te entrevista sobre projeto, orçamento e documentos, com os critérios do próprio edital, e dá uma nota de 0 a 100 com o que a banca vai questionar.",
     href: "/oportunidades",
-    cta: "Abrir o radar →",
+    cta: "Abrir o radar",
   },
   {
     tag: "02 · audiência",
-    title: "Prospecção de gigs e contratantes",
-    body: "Casas de show, festivais, marcas e escolas no seu nicho e na sua cidade, com funil próprio do primeiro contato ao fechado. Edital é sazonal; agenda de gig não pode ser.",
+    title: "Prospecção de quem contrata",
+    body: "Casas de show, festivais, marcas e escolas da tua cidade, com contato, do primeiro e-mail ao trabalho fechado. Edital abre de vez em quando; show precisa ter todo mês.",
     href: "/prospeccao",
-    cta: "Caçar leads →",
+    cta: "Caçar contratantes",
   },
   {
     tag: "03 · venda",
-    title: "Agenda & cachês",
-    body: "Cada data, contrato e pagamento com status claro: pago, pendente, atrasado. Você sabe quanto entra no mês antes de o mês começar — e cobra quem atrasou.",
+    title: "Agenda e cachês",
+    body: "Cada data, contrato e pagamento com a situação clara: pago, a receber ou atrasado. Você sabe quanto entra no mês antes de ele começar e cobra quem atrasou.",
     href: "/agenda",
-    cta: "Ver minha agenda →",
+    cta: "Ver minha agenda",
   },
   {
     tag: "04 · entrega orientada",
-    title: "Pipeline de carreira",
-    body: "Inscrições, propostas e negociações num funil só: recurso captado, cachê a receber, próxima entrega. Tudo medido em reais — nada de métrica de vaidade.",
+    title: "Pipeline de editais",
+    body: "Cada edital na sua etapa: vou inscrever, inscrito, aprovado, em execução, prestação de contas. Com o prazo e a nota da banca à vista.",
     href: "/pipeline",
-    cta: "Ver o pipeline →",
+    cta: "Ver o pipeline",
   },
 ];
 
@@ -113,7 +113,7 @@ function VerdictPreview() {
   ];
   return (
     <div className="relative w-full max-w-md">
-      <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-emerald-500/10 blur-3xl" aria-hidden />
+      <div className="absolute -inset-2 -z-10 rounded-[2rem] bg-emerald-500/10 blur-3xl sm:-inset-6" aria-hidden />
       <div className="rounded-3xl border border-neutral-800 bg-neutral-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur">
         <div className="flex items-center justify-between">
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
@@ -241,7 +241,7 @@ export default function Home() {
             ["Rider técnico", "/rider"],
             ["Press kit (EPK)", "/agenda"],
             ["Prestação de contas", "/prestacao"],
-            ["Agenda & cachês", "/agenda"],
+            ["Roteiro do ECAD", "/agenda"],
           ].map(([label, href]) => (
             <Link
               key={label}

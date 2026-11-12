@@ -163,8 +163,8 @@ export default function Inicio() {
       )}
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4" aria-label="Resumo">
-        <Stat label="A receber" value={brl(aReceber)} hint={atrasados.length ? `${atrasados.length} em atraso` : `${openGigs.filter((g) => g.status !== "pago").length} trabalhos em aberto`} href="/agenda" tone={atrasados.length ? "bad" : undefined} />
-        <Stat label="Editais no pipeline" value={String(ativos.length)} hint={prazos[0] ? `próximo prazo em ${prazos[0].dias} ${prazos[0].dias === 1 ? "dia" : "dias"}` : "nenhum prazo correndo"} href="/pipeline" />
+        <Stat label="A receber" value={brl(aReceber)} hint={atrasados.length ? `${atrasados.length} em atraso` : (() => { const n = openGigs.filter((g) => g.status !== "pago").length; return `${n} ${n === 1 ? "trabalho" : "trabalhos"} em aberto`; })()} href="/agenda" tone={atrasados.length ? "bad" : undefined} />
+        <Stat label="Editais no pipeline" value={String(ativos.length)} hint={prazos[0] ? (prazos[0].dias === 0 ? "um fecha hoje" : prazos[0].dias === 1 ? "um fecha amanhã" : `próximo prazo em ${prazos[0].dias} dias`) : "nenhum prazo correndo"} href="/pipeline" />
         <Stat label="Leads em aberto" value={String(leadsAtivos.length)} hint="contratantes pra abordar" href="/prospeccao" />
         <Stat label="Documentos" value={String(ctx.docs.length)} hint={docsVencendo.length ? `${docsVencendo.length} vencendo em 30 dias` : "tudo em dia"} href="/documentos" tone={docsVencendo.length ? "warn" : undefined} />
       </section>

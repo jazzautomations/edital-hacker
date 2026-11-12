@@ -48,6 +48,7 @@
     background: var(--color-neutral-950);
   }
   body {
+    overflow-x: clip; /* brilho decorativo nunca gera rolagem lateral */
     background:
       radial-gradient(1200px 500px at 50% -200px, color-mix(in oklab, var(--color-emerald-500) 7%, transparent), transparent 70%),
       var(--color-neutral-950);

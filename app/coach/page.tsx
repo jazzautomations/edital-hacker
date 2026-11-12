@@ -17,6 +17,8 @@ import { Badge, Button, Textarea, dataCurta } from "@/components/ui";
 
 type Msg = { role: "user" | "assistant"; text: string; actions?: string[] };
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
 const SUGGESTIONS = [
   "Me acha casas de show no Rio que tocam MPB",
   "Anota: sexta eu toco no Bar do Zé por R$ 1.500",
@@ -117,7 +119,12 @@ export default function Coach() {
   };
 
   const stats = ctx
-    ? `${ctx.gigs?.length ?? 0} trabalhos, ${ctx.leads?.length ?? 0} contratantes, ${ctx.pipeline?.length ?? 0} editais e ${ctx.docs?.length ?? 0} documentos`
+    ? [
+        plural(ctx.gigs?.length ?? 0, "trabalho", "trabalhos"),
+        plural(ctx.leads?.length ?? 0, "contratante", "contratantes"),
+        plural(ctx.pipeline?.length ?? 0, "edital", "editais"),
+        plural(ctx.docs?.length ?? 0, "documento", "documentos"),
+      ].join(", ")
     : "";
 
   const g = gmail as { configured?: boolean; connected?: boolean; calendarConfigured?: boolean; calendar?: boolean };

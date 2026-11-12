@@ -41,7 +41,22 @@ export function tidyTitle(raw: string): string {
 }
 
 /** Markdown mínimo do LLM: **negrito**, `código` e rotas do app viram links. */
-export function RichText({ text }: { text: string }) {
+/** Tabela em markdown vira linhas simples: num balão de conversa ela chega ilegível. */
+function flattenTables(text: string): string {
+  if (!text.includes("|")) return text;
+  return text
+    .split("\n")
+    .filter((l) => !/^\s*\|?\s*:?-{2,}/.test(l))
+    .map((l) =>
+      /^\s*\|.*\|\s*$/.test(l)
+        ? l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim()).filter(Boolean).join(" · ")
+        : l
+    )
+    .join("\n");
+}
+
+export function RichText({ text: raw }: { text: string }) {
+  const text = flattenTables(raw);
   const out: ReactNode[] = [];
   const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinatura|documentos|inicio|epk))\b|(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g;
   let last = 0;
