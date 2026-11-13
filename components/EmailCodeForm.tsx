@@ -119,7 +119,7 @@ export function EmailCodeForm({ cta = "Continuar", hint }: { cta?: string; hint?
 
   return (
     <>
-      {authEnabled && !locked && (
+      {false && authEnabled && !locked && (
         <>
           <LinkButton href="/login" variant="secondary" size="lg" className="w-full !bg-neutral-100 !text-neutral-950 hover:!bg-white">
             Entrar com Google ou conta

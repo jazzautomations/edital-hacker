@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSignInUrl } from "@workos-inc/authkit-nextjs";
 
-// getSignInUrl() grava o cookie PKCE — só pode rodar em Route Handler,
-// nunca no render de uma page (era o que derrubava o /login em prod).
+// Login é por código no e-mail (convex/auth.ts). O WorkOS saiu do fluxo:
+// quem cair em /login vai direto pro formulário.
 export async function GET(request: Request) {
-  if (!process.env.WORKOS_CLIENT_ID) {
-    return NextResponse.redirect(new URL("/coach", request.url));
-  }
-  return NextResponse.redirect(await getSignInUrl());
+  return NextResponse.redirect(new URL("/inicio", request.url));
 }
