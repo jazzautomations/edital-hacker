@@ -18,6 +18,16 @@ export default function SignClient({ params }: { params: Promise<{ link: string 
   const [drawn, setDrawn] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null);
 
+  // dados que a pessoa já mandou no WhatsApp chegam preenchidos
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (!d || prefilled.current) return;
+    prefilled.current = true;
+    if (d.me.cpf) setCpf(d.me.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"));
+    if (d.me.rg) setRg(d.me.rg);
+    if (d.me.address) setAddress(d.me.address);
+  }, [d]);
+
   // traço com dedo ou mouse
   useEffect(() => {
     const c = canvas.current;

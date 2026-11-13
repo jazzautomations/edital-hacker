@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
 import { useMyProfile } from "@/lib/useProfile";
 import type { Profile } from "@/lib/types";
 import { SignIn } from "@/components/SignIn";
+import { SignaturesPanel } from "@/components/SignaturesPanel";
 import {
   Badge, Button, Card, EmptyState, Field, Input, Notice, Page, PageHeader, Select, SectionTitle, Skeleton, dataCurta, diasAte,
 } from "@/components/ui";
@@ -75,6 +76,10 @@ export default function Documentos() {
   const [form, setForm] = useState<{ name: string; kind: string; expiresAt: string; file: File | null }>({
     name: "", kind: "certidoes", expiresAt: "", file: null,
   });
+  const [aba, setAba] = useState<"cofre" | "assinaturas">("cofre");
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("aba") === "assinaturas") setAba("assinaturas");
+  }, []);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -169,13 +174,27 @@ export default function Documentos() {
     <Page>
       <PageHeader
         title="Teus documentos"
-        description="Guarda uma vez, usa em todo edital. O Manager avisa antes de cada certidão vencer."
-        actions={
+        description="Guarda uma vez, usa em todo edital. Junta as assinaturas da banda sem correr atrás de ninguém."
+        actions={aba === "cofre" && (
           <Button onClick={() => { setOpen(true); setErr(null); }}>
             Adicionar documento
           </Button>
-        }
+        )}
       />
+      <div className="mb-6 flex gap-1.5" role="tablist" aria-label="Seções de documentos">
+        {([["cofre", "Cofre"], ["assinaturas", "Assinaturas"]] as const).map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={aba === id}
+            onClick={() => { setAba(id); window.history.replaceState(null, "", id === "cofre" ? "/documentos" : "/documentos?aba=assinaturas"); }}
+            className={`rounded-full px-4 py-1.5 text-sm ${aba === id ? "bg-neutral-100 font-semibold text-neutral-950" : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {aba === "assinaturas" ? <SignaturesPanel /> : (<>
 
       {(expired.length > 0 || soon.length > 0) && (
         <div className="mb-6 flex flex-col gap-2">
@@ -395,6 +414,7 @@ export default function Documentos() {
           </Card>
         </aside>
       </div>
+      </>)}
     </Page>
   );
 }

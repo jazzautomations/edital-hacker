@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { emailOfSession } from "./auth";
+import { internal } from "./_generated/api";
 
 function newToken(): string {
   const b = new Uint8Array(18);
@@ -167,6 +168,7 @@ export const sign = mutation({
         : s
     );
     await ctx.db.patch(d._id, { signers });
+    await ctx.scheduler.runAfter(0, internal.zap.afterSign, { docId: d._id }); // avisa o próximo no zap
     return { ok: true };
   },
 });
@@ -191,5 +193,14 @@ export const forPdf = query({
       createdAt: d.createdAt,
       signers: d.signers.map((s) => ({ name: s.name, role: s.role, order: s.order, status: s.status, cpf: s.cpf, rg: s.rg, address: s.address, signature: s.signature, signedAt: s.signedAt })),
     };
+  },
+});
+
+export const listForServer = query({
+  args: { secret: v.string(), profileId: v.id("profiles") },
+  handler: async (ctx, a) => {
+    if (!process.env.NOTIFY_SECRET || a.secret !== process.env.NOTIFY_SECRET) return [];
+    const docs = await ctx.db.query("signDocs").withIndex("by_profile", (q) => q.eq("profileId", a.profileId)).order("desc").take(20);
+    return docs.map((d) => ({ _id: d._id, title: d.title }));
   },
 });

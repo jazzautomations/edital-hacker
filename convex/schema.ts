@@ -278,6 +278,42 @@ export default defineSchema({
     ),
     createdAt: v.number(),
   }).index("by_profile", ["profileId"]),
+  // WhatsApp do próprio artista, conectado por QR code (uma instância por perfil)
+  zapConnections: defineTable({
+    profileId: v.id("profiles"),
+    instance: v.string(), // mgr-<profileId>
+    status: v.string(), // pedindo_qr | qr | conectado | desconectado
+    qr: v.optional(v.string()), // data URL do QR atual
+    phone: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_profile", ["profileId"])
+    .index("by_instance", ["instance"]),
+  // Fila de tarefas que a ponte do servidor de WhatsApp executa
+  zapJobs: defineTable({
+    kind: v.string(), // criar | enviar | desconectar
+    instance: v.string(),
+    phone: v.optional(v.string()),
+    text: v.optional(v.string()),
+    status: v.string(), // pendente | feito | erro
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_status", ["status"]),
+  // Conversa com cada integrante: pede os dados, confere, manda o link
+  zapThreads: defineTable({
+    instance: v.string(),
+    phone: v.string(), // só dígitos, com 55
+    docId: v.id("signDocs"),
+    order: v.number(),
+    state: v.string(), // pedindo | conferindo | confirmado | link_enviado | assinado
+    data: v.object({ name: v.optional(v.string()), cpf: v.optional(v.string()), rg: v.optional(v.string()), address: v.optional(v.string()) }),
+    updatedAt: v.number(),
+  })
+    .index("by_instance_phone", ["instance", "phone"])
+    .index("by_doc", ["docId"]),
+  zapInbox: defineTable({ msgId: v.string(), instance: v.string(), phone: v.string(), text: v.string(), at: v.number() })
+    .index("by_msg", ["msgId"])
+    .index("by_instance", ["instance", "at"]),
   signLinks: defineTable({ token: v.string(), docId: v.id("signDocs"), order: v.number() }).index("by_token", ["token"]),
 
   // Transcrição de cada chamada de voz (coach ou sabatina), gravada ao desligar.

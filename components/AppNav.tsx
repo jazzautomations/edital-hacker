@@ -17,7 +17,6 @@ const APP_LINKS = [
   { href: "/coach", label: "Coach" },
 ];
 const MORE_LINKS = [
-  { href: "/assinaturas", label: "Assinaturas" },
   { href: "/rider", label: "Rider técnico" },
   { href: "/prestacao", label: "Prestação de contas" },
   { href: "/assinatura", label: "Planos" },

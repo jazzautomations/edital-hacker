@@ -127,4 +127,42 @@ http.route({
   }),
 });
 
+// WhatsApp do artista (servidor Evolution): QR, conexão e mensagens recebidas.
+// URL cadastrada na criação de cada instância mgr-*, com o header x-zap-secret.
+http.route({
+  path: "/zap/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const secret = process.env.ZAP_SECRET;
+    if (!secret || req.headers.get("x-zap-secret") !== secret) return new Response("forbidden", { status: 403 });
+    const body = (await req.json().catch(() => null)) as any;
+    const instance = String(body?.instance ?? "");
+    if (!instance.startsWith("mgr-")) return new Response("ok");
+    const event = String(body?.event ?? "").toLowerCase().replace(/_/g, ".");
+    const data = body?.data ?? {};
+    if (event === "qrcode.updated") {
+      const qr = data?.qrcode?.base64 ?? data?.base64;
+      if (typeof qr === "string" && qr.startsWith("data:image")) await ctx.runMutation(internal.zap.onEvent, { instance, event: "qr", qr });
+    } else if (event === "connection.update") {
+      const phone = typeof data?.wuid === "string" ? data.wuid.split("@")[0] : undefined;
+      await ctx.runMutation(internal.zap.onEvent, { instance, event: "connection", state: String(data?.state ?? ""), phone });
+    } else if (event === "messages.upsert") {
+      const items = Array.isArray(data) ? data : [data];
+      for (const m of items) {
+        const key = m?.key ?? {};
+        if (key.fromMe) continue;
+        // conta com privacidade nova vem como @lid; o número real fica no Alt/senderPn
+        const jid = [key.remoteJid, key.remoteJidAlt, key.senderPn, m?.senderPn].find((j: unknown) => typeof j === "string" && j.endsWith("@s.whatsapp.net"));
+        if (!jid || String(key.remoteJid ?? "").endsWith("@g.us")) continue;
+        const text = m?.message?.conversation ?? m?.message?.extendedTextMessage?.text ?? m?.message?.imageMessage?.caption ?? "";
+        if (!text || !key.id) continue;
+        const phone = jid.split("@")[0];
+        const threadId = await ctx.runMutation(internal.zap.saveInbound, { msgId: String(key.id), instance, phone, text: String(text).slice(0, 4000) });
+        if (threadId) await ctx.scheduler.runAfter(0, internal.zap.handleInbound, { threadId, text: String(text).slice(0, 4000) });
+      }
+    }
+    return new Response("ok");
+  }),
+});
+
 export default http;

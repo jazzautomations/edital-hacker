@@ -28,7 +28,7 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Falou de agência, empresário, booking, showcase → consultar_mercado; quer descobrir onde os artistas de uma agência tocam → mapear_agencia. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Quer se inscrever ou preparar um edital → ler_edital, depois checklist_edital: diga o que já tem, o que falta (peça pra mandar em /documentos), o que precisa escrever (ofereça redigir junto) e sugira treinar a banca em /sabatina. Se não conseguir ler o edital, peça o link do PDF do regulamento. Precisa de documento assinado por mais gente (declaração, anexo, anuência da banda) → preparar_assinaturas: pergunte nome e WhatsApp de cada integrante e a ordem, se não souber. Dúvida fora do app (regra, notícia, como emitir certidão, quem é o financiador) → pesquisar_web, citando a fonte. Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Falou de agência, empresário, booking, showcase → consultar_mercado; quer descobrir onde os artistas de uma agência tocam → mapear_agencia. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Quer se inscrever ou preparar um edital → ler_edital, depois checklist_edital: diga o que já tem, o que falta (peça pra mandar em /documentos), o que precisa escrever (ofereça redigir junto) e sugira treinar a banca em /sabatina. Se não conseguir ler o edital, peça o link do PDF do regulamento. Precisa de documento assinado por mais gente (declaração, anexo, anuência da banda) → preparar_assinaturas: pergunte nome e WhatsApp de cada integrante e a ordem, se não souber; depois ofereça pedir os dados no zap (pedir_dados_zap). Dúvida fora do app (regra, notícia, como emitir certidão, quem é o financiador) → pesquisar_web, citando a fonte. Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. SÓ converse quando nenhuma tool se aplicar.
 2b. RAPPORT É LEI: antes de redigir email de abordagem ou proposta pra um lead/edital, chama research_target se o dossiê ainda não existir — e SEMPRE use os ganchos de rapport do dossiê no texto (citar show recente, linguagem deles, projeto específico). Email genérico é spam.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
@@ -330,6 +330,16 @@ export const COACH_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: "pedir_dados_zap",
+    description:
+      "Pelo WhatsApp do artista (conectado em Documentos › Assinaturas), manda mensagem pra cada integrante de um documento pedindo nome, CPF, RG e endereço, confere com a pessoa, preenche e envia o link de assinatura na vez dela. Só chame quando o artista pedir pra mandar/pedir no zap.",
+    parameters: {
+      type: "object",
+      properties: { documento: { type: "string", description: "título (ou parte) do documento de assinatura" } },
+      required: ["documento"],
+    },
+  },
+  {
     name: "pesquisar_web",
     description: "Pesquisa na internet e lê as páginas (fontes reais). Use pra dúvidas sobre editais, financiadores, regras, como emitir certidões, notícias do setor.",
     parameters: {
@@ -606,6 +616,15 @@ export async function runCoachTool(
         signers,
       })) as { signers: { name: string; order: number }[] };
       return `Documento "${docName}" pronto${modelo ? " seguindo o modelo do edital" : ""}, com ${r.signers.length} pessoa(s) pra assinar ${call.arguments.sequencial === false ? "em qualquer ordem" : "na ordem: " + r.signers.map((x) => `${x.order}. ${x.name}`).join(", ")}. Tá em /assinaturas: lá tem o botão "Mandar no WhatsApp" pra cada um, e o PDF assinado por todos sai no fim. Cada um completa CPF/RG/endereço no próprio link.`;
+    }
+    case "pedir_dados_zap": {
+      const docs = (await convex.query(api.signDocs.listForServer, { secret: process.env.NOTIFY_SECRET ?? "", profileId: profile._id })) as { _id: string; title: string }[];
+      const needle = fold(String(call.arguments.documento ?? ""));
+      const d = docs.find((x) => fold(x.title).includes(needle)) ?? docs[0];
+      if (!d) return "Não tem documento de assinatura ainda. Crie com preparar_assinaturas.";
+      const r = (await convex.mutation(api.zap.startIntakeFromServer, { secret: process.env.NOTIFY_SECRET ?? "", profileId: profile._id, docId: d._id as never })) as { ok: boolean; sent?: number; semFone?: string[] };
+      if (!r.ok) return "O WhatsApp do artista não está conectado. Peça pra conectar em /assinaturas (QR code, 30 segundos) e chame de novo.";
+      return `Pedi os dados de "${d.title}" pra ${r.sent} pessoa(s) pelo WhatsApp do artista.${r.semFone?.length ? ` Sem número cadastrado: ${r.semFone.join(", ")} (peça o WhatsApp deles).` : ""} O andamento aparece em /assinaturas; cada um recebe o link quando os dados estiverem conferidos e for a vez.`;
     }
     case "pesquisar_web": {
       const q = String(call.arguments.pergunta ?? "").trim();
