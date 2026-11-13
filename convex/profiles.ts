@@ -135,6 +135,23 @@ export const deleteAccount = mutation({
         const rows = await ctx.db.query(table).withIndex("by_profile_opp", (q: any) => q.eq("profileId", id)).collect();
         for (const r of rows) await ctx.db.delete(r._id);
       }
+      // chamadas de voz, documentos de assinatura (e os links/conversas deles) e o WhatsApp conectado
+      for (const r of await ctx.db.query("voiceCalls").withIndex("by_profile", (q) => q.eq("profileId", id)).collect()) await ctx.db.delete(r._id);
+      for (const d of await ctx.db.query("signDocs").withIndex("by_profile", (q) => q.eq("profileId", id)).collect()) {
+        for (const s of d.signers) {
+          const l = await ctx.db.query("signLinks").withIndex("by_token", (q) => q.eq("token", s.token)).unique();
+          if (l) await ctx.db.delete(l._id);
+        }
+        for (const t of await ctx.db.query("zapThreads").withIndex("by_doc", (q) => q.eq("docId", d._id)).collect()) await ctx.db.delete(t._id);
+        await ctx.db.delete(d._id);
+      }
+      const conn = await ctx.db.query("zapConnections").withIndex("by_profile", (q) => q.eq("profileId", id)).first();
+      if (conn) {
+        // desliga a sessão do WhatsApp no servidor antes de esquecer a conexão
+        await ctx.db.insert("zapJobs", { kind: "desconectar", instance: conn.instance, status: "pendente", createdAt: Date.now() });
+        for (const m of await ctx.db.query("zapInbox").withIndex("by_instance", (q) => q.eq("instance", conn.instance)).collect()) await ctx.db.delete(m._id);
+        await ctx.db.delete(conn._id);
+      }
       const pend = await ctx.db.query("pendingActions").withIndex("by_profile", (q) => q.eq("profileId", id)).collect();
       for (const r of pend) await ctx.db.delete(r._id);
       const pix = await ctx.db.query("pixCharges").collect();
