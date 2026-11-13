@@ -76,3 +76,26 @@ export const remove = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+/** Grava o checklist de inscrição (servidor do app, com o segredo). Põe o edital no pipeline se ainda não estiver. */
+export const setChecklist = mutation({
+  args: {
+    secret: v.string(),
+    profileId: v.id("profiles"),
+    opportunityId: v.id("opportunities"),
+    checklist: v.array(v.object({ item: v.string(), status: v.string(), doc: v.optional(v.string()), hint: v.optional(v.string()) })),
+  },
+  handler: async (ctx, args) => {
+    if (!process.env.NOTIFY_SECRET || args.secret !== process.env.NOTIFY_SECRET) throw new Error("não autorizado");
+    const existing = await ctx.db
+      .query("pipelineItems")
+      .withIndex("by_profile_opp", (q) => q.eq("profileId", args.profileId).eq("opportunityId", args.opportunityId))
+      .unique();
+    const patch = { checklist: args.checklist, checklistAt: Date.now(), updatedAt: Date.now() };
+    if (existing) {
+      await ctx.db.patch(existing._id, patch);
+      return existing._id;
+    }
+    return await ctx.db.insert("pipelineItems", { profileId: args.profileId, opportunityId: args.opportunityId, stage: "interessado", ...patch });
+  },
+});

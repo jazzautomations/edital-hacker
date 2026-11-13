@@ -110,6 +110,10 @@ type Provider = { name: string; apiKey: string; baseUrl: string; model: string }
 export function providers(): Provider[] {
   const e = process.env;
   const list: (Provider | null)[] = [
+    // AI Gateway da Vercel: no ar o token OIDC do projeto é pego na hora (apiKey vazia = buscar)
+    e.AI_GATEWAY_API_KEY || e.VERCEL
+      ? { name: "gateway", apiKey: e.AI_GATEWAY_API_KEY ?? "", baseUrl: "https://ai-gateway.vercel.sh/v1", model: e.AI_GATEWAY_MODEL ?? "openai/gpt-4.1-mini" }
+      : null,
     e.LLM_API_KEY
       ? {
           name: "primary",
@@ -137,7 +141,8 @@ export function providers(): Provider[] {
   return list.filter((p): p is Provider => p !== null);
 }
 
-const RETRYABLE = new Set([401, 403, 404, 408, 429, 500, 502, 503, 504]);
+// 400 também: um provedor pode recusar o formato (ex.: Gemini sem thought_signature) e o próximo aceitar
+const RETRYABLE = new Set([400, 401, 402, 403, 404, 408, 413, 422, 429, 500, 502, 503, 504]);
 
 /** POST /chat/completions com fallback entre provedores. Devolve o Response ok. */
 export async function completions(body: Record<string, unknown>, timeoutMs = 15000, pin?: string): Promise<Response & { provider?: string }> {
@@ -149,9 +154,15 @@ export async function completions(body: Record<string, unknown>, timeoutMs = 150
   let lastErr = "";
   for (const p of chain) {
     try {
+      let apiKey = p.apiKey;
+      if (p.name === "gateway" && !apiKey) {
+        const { getVercelOidcToken } = await import("@vercel/oidc");
+        apiKey = await getVercelOidcToken().catch(() => "");
+        if (!apiKey) continue;
+      }
       const res = await fetch(`${p.baseUrl}/chat/completions`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${p.apiKey}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ ...body, model: p.model }),
         signal: AbortSignal.timeout(timeoutMs),
       });

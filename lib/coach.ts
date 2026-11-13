@@ -12,9 +12,11 @@ import {
   listCalendarEvents,
 } from "@/lib/composio";
 import { ruleFor } from "@/lib/docRules";
-import { AGENCY_INTEL } from "@/lib/agencySeed";
+import { AGENCY_INTEL, AGENCY_SEED } from "@/lib/agencySeed";
 import { fitOf, prazoConfiavel, valorConfiavel, viewOf } from "@/lib/opp";
 import type { Opportunity } from "@/lib/types";
+import { scrapeMarkdown, searchMarkdown } from "@/lib/firecrawl";
+import { structureEdital, type EditalReading } from "@/lib/editalParse";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -26,7 +28,7 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Falou de agência, empresário, booking, showcase → consultar_mercado; quer descobrir onde os artistas de uma agência tocam → mapear_agencia. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Quer se inscrever ou preparar um edital → ler_edital, depois checklist_edital: diga o que já tem, o que falta (peça pra mandar em /documentos), o que precisa escrever (ofereça redigir junto) e sugira treinar a banca em /sabatina. Se não conseguir ler o edital, peça o link do PDF do regulamento. Dúvida fora do app (regra, notícia, como emitir certidão, quem é o financiador) → pesquisar_web, citando a fonte. Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. SÓ converse quando nenhuma tool se aplicar.
 2b. RAPPORT É LEI: antes de redigir email de abordagem ou proposta pra um lead/edital, chama research_target se o dossiê ainda não existir — e SEMPRE use os ganchos de rapport do dossiê no texto (citar show recente, linguagem deles, projeto específico). Email genérico é spam.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
@@ -109,8 +111,6 @@ export function contextBlock(c: any): string {
   if (sab.length) {
     lines.push(`SABATINAS FEITAS: ${sab.map((s: any) => `${s.score}/100`).join(", ")}`);
   }
-  lines.push("", "MERCADO (intel verificada — use pra aconselhar sobre agências/empresários):");
-  for (const i of AGENCY_INTEL) lines.push(`  · ${i}`);
   return lines.filter((l) => l !== null).join("\n");
 }
 
@@ -256,6 +256,60 @@ export const COACH_TOOLS: ToolDef[] = [
         id: { type: "string", description: "ref interna do edital (vem do buscar_editais); se não tiver, o nome do edital" },
       },
       required: ["id"],
+    },
+  },
+  {
+    name: "consultar_mercado",
+    description:
+      "Mapa verificado do mercado: agências de booking e empresariamento, feiras de showcase e marketplaces do Brasil (quem são, com quem trabalham, contato, como abordar) + regras do mercado (comissão, contrato). Use quando falarem de agência, empresário, booking, showcase, feira ou como funciona o mercado.",
+    parameters: {
+      type: "object",
+      properties: { busca: { type: "string", description: "opcional: nome, cidade ou tipo (agência, showcase, marketplace)" } },
+    },
+  },
+  {
+    name: "mapear_agencia",
+    description:
+      "Fonte da fonte: pega uma agência de booking/empresariamento, descobre os artistas do casting dela e, pela agenda deles, QUEM contrata (casas, festivais, SESC, prefeituras). Esses contratantes entram como leads em /prospeccao. Leva ~2-4 min.",
+    parameters: {
+      type: "object",
+      properties: {
+        agencia: { type: "string", description: "nome da agência (ex: uma do consultar_mercado)" },
+        regiao: { type: "string", description: "opcional: cidade/estado de interesse" },
+      },
+      required: ["agencia"],
+    },
+  },
+  {
+    name: "ler_edital",
+    description:
+      "Lê o edital de verdade (regulamento): resumo, quem pode, o que desclassifica, documentos obrigatórios, critérios de avaliação e prazos. Use antes de orientar inscrição. Se o artista mandar o link do PDF do regulamento, passe em url.",
+    parameters: {
+      type: "object",
+      properties: {
+        ref: { type: "string", description: "ref interna (do buscar_editais) ou nome do edital" },
+        url: { type: "string", description: "opcional: link do regulamento/PDF que o artista mandou" },
+      },
+      required: ["ref"],
+    },
+  },
+  {
+    name: "checklist_edital",
+    description:
+      "Monta o checklist de inscrição: cruza os documentos exigidos pelo edital com o cofre de documentos do artista (/documentos) e diz o que já tem, o que falta, o que está vencido e o que precisa ser escrito. Salva no card do edital em /pipeline.",
+    parameters: {
+      type: "object",
+      properties: { ref: { type: "string", description: "ref interna ou nome do edital" } },
+      required: ["ref"],
+    },
+  },
+  {
+    name: "pesquisar_web",
+    description: "Pesquisa na internet e lê as páginas (fontes reais). Use pra dúvidas sobre editais, financiadores, regras, como emitir certidões, notícias do setor.",
+    parameters: {
+      type: "object",
+      properties: { pergunta: { type: "string", description: "o que pesquisar, em português" } },
+      required: ["pergunta"],
     },
   },
   {
@@ -450,13 +504,86 @@ export async function runCoachTool(
       let opp = (await convex.query(api.opportunities.get, { id: id as never }).catch(() => null)) as Opportunity | null;
       if (!opp && id) {
         // o modelo às vezes manda o nome em vez da ref
-        const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const all = (await convex.query(api.opportunities.list, { limit: 400 })) as Opportunity[];
-        opp = all.find((o) => fold(`${o.name} ${viewOf(o).title}`).includes(fold(id))) ?? null;
+        opp = await resolveOpp(convex, profile, id);
       }
       if (!opp) return `Não achei esse edital no radar (id "${id}"). Busca de novo com buscar_editais.`;
       await convex.mutation(api.pipeline.add, { profileId: profile._id, opportunityId: opp._id as never });
       return `"${viewOf(opp).title}" salvo no pipeline, etapa interessado. Tá em /pipeline; a banca simulada desse edital fica em /sabatina/${opp._id}.`;
+    }
+    case "consultar_mercado": {
+      const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const q = call.arguments.busca ? fold(String(call.arguments.busca)) : "";
+      const hits = AGENCY_SEED.filter((a) => !q || fold(`${a.name} ${a.kind} ${a.city} ${a.uf ?? ""} ${a.fit} ${a.notes}`).includes(q)).slice(0, 8);
+      return (
+        `MERCADO — regras:\n${AGENCY_INTEL.map((i) => `  · ${i}`).join("\n")}\n\n` +
+        (hits.length
+          ? `QUEM É QUEM${q ? ` ("${call.arguments.busca}")` : ""}:\n` +
+            hits.map((a) => `  · ${a.name} (${a.kind}, ${a.city}${a.uf ? `/${a.uf}` : ""}) — pra quem: ${a.fit} · ${a.notes}${a.contact ? ` · contato: ${a.contact}` : ""} · fonte: ${a.sourceUrl}`).join("\n")
+          : "Ninguém no mapa com esse filtro.")
+      ).slice(0, 6000);
+    }
+    case "mapear_agencia": {
+      const r = (await convex.action(api.discover.mapAgency, {
+        profileId: profile._id,
+        agency: String(call.arguments.agencia ?? ""),
+        niche: (profile.artAreas ?? []).join(", ") || "música",
+        region: call.arguments.regiao ? String(call.arguments.regiao) : profile.uf || undefined,
+      })) as any;
+      if (r?.error) return `O mapeamento da agência falhou agora (${r.error.slice(0, 100)}). Sugira tentar de novo ou outra agência.`;
+      if (!r?.found) return `Não achei contratantes verificáveis pelo casting de "${call.arguments.agencia}". Tenta outra agência (consultar_mercado lista as verificadas).`;
+      return `Casting lido (${r.artists.slice(0, 8).join(", ")}${r.artists.length > 8 ? "…" : ""}). ${r.found} contratantes que compram show desses artistas entraram como leads em /prospeccao, com a evidência de quem tocou lá. Use isso no rapport: "vocês receberam X, meu som conversa com isso".`;
+    }
+    case "pesquisar_web": {
+      const q = String(call.arguments.pergunta ?? "").trim();
+      if (!q) return "Faltou dizer o que pesquisar.";
+      try {
+        const { markdown, sources } = await searchMarkdown(q, 3);
+        if (!markdown) return `Nada útil na web pra "${q}".`;
+        return `RESULTADOS DA WEB pra "${q}" (cite a fonte ao responder):\nFontes: ${sources.join(" · ")}\n\n${markdown.slice(0, 5000)}`;
+      } catch (e) {
+        return `A pesquisa na web falhou agora (${String(e).slice(0, 80)}). Responda com o que já sabe e avise que não conferiu na internet.`;
+      }
+    }
+    case "ler_edital": {
+      const opp = await resolveOpp(convex, profile, String(call.arguments.ref ?? ""));
+      if (!opp) return `Não achei esse edital ("${call.arguments.ref}") no radar nem no pipeline. Busca com buscar_editais.`;
+      const r = await readEdital(convex, opp, call.arguments.url ? String(call.arguments.url) : undefined);
+      if (!r) {
+        return `Não consegui abrir o regulamento de "${viewOf(opp).title}" (${opp.sourceUrl}). Peça ao artista o link do PDF do regulamento e chame ler_edital de novo com url.`;
+      }
+      const fmt = (l: string[]) => (l.length ? l.map((x) => `    - ${x}`).join("\n") : "    (não informado)");
+      return [
+        `EDITAL: ${viewOf(opp).title} — ${opp.sourceName} · página: ${opp.sourceUrl}`,
+        r.summary ? `Resumo: ${r.summary}` : null,
+        r.eligibility ? `Quem pode: ${r.eligibility}` : null,
+        `Desclassifica:\n${fmt(r.disqualifiers)}`,
+        `Documentos obrigatórios:\n${fmt(r.requiredDocs)}`,
+        `Critérios da banca:\n${fmt(r.rubric.map((c) => `${c.criterion}${c.weight ? ` (${c.weight})` : ""}`))}`,
+        `Prazos:\n${fmt(r.deadlines.map((d) => `${d.label}: ${d.date.split("-").reverse().join("/")}`))}`,
+        `Banca simulada: /sabatina/${opp._id} · [ref interna, nunca mostrar: ${opp._id}]`,
+      ].filter(Boolean).join("\n");
+    }
+    case "checklist_edital": {
+      const opp = await resolveOpp(convex, profile, String(call.arguments.ref ?? ""));
+      if (!opp) return `Não achei esse edital ("${call.arguments.ref}"). Busca com buscar_editais.`;
+      const r = await readEdital(convex, opp);
+      if (!r) return `Não consegui ler o regulamento de "${viewOf(opp).title}" pra montar o checklist. Peça o link do PDF do regulamento e chame ler_edital com url; depois o checklist.`;
+      if (!r.requiredDocs.length) return `O regulamento de "${viewOf(opp).title}" não lista documentos de forma clara. Peça o PDF completo do regulamento (anexos costumam ter a lista) e chame ler_edital com url.`;
+      const docs = (await convex.query(api.documents.listForProfile, { profileId: profile._id })) as any[];
+      const checklist = buildChecklist(r.requiredDocs, docs, opp.registrationTo);
+      await convex.mutation(api.pipeline.setChecklist, {
+        secret: process.env.NOTIFY_SECRET ?? "",
+        profileId: profile._id,
+        opportunityId: opp._id as never,
+        checklist,
+      });
+      const icon: Record<string, string> = { ok: "TEM", falta: "FALTA", vencido: "VENCIDO", escrever: "ESCREVER", emitir_perto: "EMITIR NA SEMANA" };
+      const faltam = checklist.filter((c) => c.status !== "ok").length;
+      return (
+        `CHECKLIST de "${viewOf(opp).title}" (${checklist.length - faltam}/${checklist.length} prontos), salvo em /pipeline:\n` +
+        checklist.map((c) => `  · [${icon[c.status] ?? c.status}] ${c.item}${c.doc ? ` ← ${c.doc}` : ""}${c.hint ? ` (${c.hint})` : ""}`).join("\n") +
+        `\n\nDiga o que falta e peça pro artista mandar em /documentos; ofereça redigir os itens ESCREVER. Banca simulada em /sabatina/${opp._id}.`
+      );
     }
     case "consultar_cache": {
       const r = (await convex.action(api.pncp.benchmark, {
@@ -478,4 +605,129 @@ export async function runCoachTool(
     default:
       return `Tool desconhecida: ${call.name}`;
   }
+}
+
+// ---- jornada do edital: achar, ler, checar documentos ----
+
+async function resolveOpp(convex: ConvexHttpClient, profile: any, ref: string): Promise<Opportunity | null> {
+  const r = ref.trim();
+  if (!r) return null;
+  if (/^[a-z0-9]{32}$/.test(r)) {
+    const o = (await convex.query(api.opportunities.get, { id: r as never }).catch(() => null)) as Opportunity | null;
+    if (o) return o;
+  }
+  const pipeline = (await convex.query(api.pipeline.listForProfile, { profileId: profile._id })) as any[];
+  const inPipe = bestMatch(r, pipeline.map((i) => i.opportunity).filter(Boolean) as Opportunity[]);
+  if (inPipe) return inPipe;
+  const all = (await convex.query(api.opportunities.list, { limit: 400 })) as Opportunity[];
+  return bestMatch(r, all);
+}
+
+const STOP = new Set(["de", "da", "do", "das", "dos", "edital", "para", "pra", "com", "the", "uma", "um", "no", "na", "em", "e", "o", "a"]);
+/** Acha o edital pelo nome do jeito que a pessoa fala ("credenciamento de shows de Brotas"). */
+function bestMatch(ref: string, opps: Opportunity[]): Opportunity | null {
+  const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const words = fold(ref).split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w));
+  if (!words.length) return null;
+  let best: Opportunity | null = null;
+  let bestScore = 0;
+  for (const o of opps) {
+    const hay = fold(`${o.name} ${viewOf(o).title} ${o.sourceName} ${o.shortDescription ?? ""}`);
+    const hit = words.filter((w) => hay.includes(w)).length / words.length;
+    if (hit > bestScore) { best = o; bestScore = hit; }
+  }
+  return bestScore >= 0.6 ? best : null;
+}
+
+/** Leitura estruturada do edital: usa a que já existe ou lê agora (e guarda pra todo mundo). */
+async function readEdital(convex: ConvexHttpClient, opp: Opportunity, url?: string): Promise<EditalReading | null> {
+  const cur = (opp as any).enriched as EditalReading | undefined;
+  if (cur && !url && cur.requiredDocs?.length) return cur;
+  try {
+    const md = url ? await scrapeMarkdown(url) : await editalText(opp);
+    const reading = await structureEdital(md, opp.name);
+    await convex.mutation(api.opportunities.saveReading, {
+      secret: process.env.NOTIFY_SECRET ?? "",
+      id: opp._id as never,
+      rawMarkdown: md,
+      enriched: reading,
+    });
+    return reading;
+  } catch (e) {
+    console.warn("[ler_edital]", String(e).slice(0, 200));
+    return cur ?? null;
+  }
+}
+
+/**
+ * Texto do edital. Compra pública (PNCP): a página é um app que o leitor não
+ * abre, mas a API pública lista os PDFs (edital + anexos), que são lidos direto.
+ */
+async function editalText(opp: Opportunity): Promise<string> {
+  const m = /pncp\.gov\.br\/app\/compras\/(\d{14})\/(\d{4})\/(\d+)/.exec(opp.sourceUrl);
+  if (m) {
+    const r = await fetch(`https://pncp.gov.br/api/pncp/v1/orgaos/${m[1]}/compras/${m[2]}/${m[3]}/arquivos`, { signal: AbortSignal.timeout(15000) });
+    const files = r.ok ? ((await r.json()) as { url: string; titulo?: string; tipoDocumentoNome?: string; statusAtivo?: boolean }[]) : [];
+    const ordered = files
+      .filter((f) => f.statusAtivo !== false && f.url)
+      .sort((a, b) => Number(b.tipoDocumentoNome === "Edital") - Number(a.tipoDocumentoNome === "Edital"))
+      .slice(0, 3);
+    const parts: string[] = [];
+    for (const f of ordered) {
+      try {
+        parts.push(`# ${f.titulo ?? f.tipoDocumentoNome ?? "documento"}\n${await scrapeMarkdown(f.url)}`);
+      } catch (e) {
+        console.warn("[pncp arquivo]", f.url, String(e).slice(0, 100));
+      }
+    }
+    if (parts.length) return parts.join("\n\n").slice(0, 120000);
+  }
+  return await scrapeMarkdown(opp.sourceUrl);
+}
+
+const DOC_GROUPS: string[][] = [
+  ["rg", "identidade", "cnh", "documento de identificacao", "documento com foto"],
+  ["cpf"],
+  ["residencia", "endereco", "domicilio"],
+  ["cnpj", "cartao cnpj"],
+  ["mei", "ccmei", "microempreendedor"],
+  ["fgts", "crf"],
+  ["trabalhist", "cndt"],
+  ["federal", "receita", "pgfn", "uniao"],
+  ["estadual", "sefaz"],
+  ["municipal", "prefeitura", "iss"],
+  ["portfolio", "clipping", "comprovacao de atuacao", "trajetoria"],
+  ["curriculo"],
+  ["banc", "conta corrente", "dados bancarios"],
+  ["estatuto", "contrato social", "ata"],
+  ["foto"],
+  ["video", "link"],
+  ["release", "biografia"],
+];
+const ESCREVER = /declara|carta|termo|formul|plano de trabalho|projeto|proposta|orcament|cronograma|justificativa|memorial|ficha de inscri|anexo [ivx]/;
+
+export function buildChecklist(required: string[], docs: any[], registrationTo?: string) {
+  const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const today = new Date().toISOString().slice(0, 10);
+  return required.slice(0, 30).map((item) => {
+    const it = fold(item);
+    const group = DOC_GROUPS.find((g) => g.some((t) => it.includes(t)));
+    const doc = group
+      ? docs.find((d) => {
+          const dt = fold(`${d.name} ${d.kind ?? ""} ${d.fileName ?? ""}`);
+          return group.some((t) => dt.includes(t));
+        })
+      : undefined;
+    const rule = ruleFor(item);
+    if (!doc) {
+      if (ESCREVER.test(it)) return { item, status: "escrever", hint: "o coach redige com você" };
+      return { item, status: "falta", hint: rule?.hint };
+    }
+    if (doc.expiresAt && doc.expiresAt.slice(0, 10) < today) return { item, status: "vencido", doc: doc.name, hint: rule?.hint ?? "emite de novo" };
+    if (doc.expiresAt && registrationTo && doc.expiresAt.slice(0, 10) < registrationTo.slice(0, 10)) {
+      return { item, status: "ok", doc: doc.name, hint: `vence ${doc.expiresAt.slice(0, 10).split("-").reverse().join("/")}: entrega antes disso ou emite de novo` };
+    }
+    if (rule?.validityDays && rule.validityDays <= 30) return { item, status: "emitir_perto", doc: doc.name, hint: rule.hint };
+    return { item, status: "ok", doc: doc.name };
+  });
 }

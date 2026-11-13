@@ -56,6 +56,8 @@ export interface PipelineItem {
   notes?: string;
   sabatinaScore?: number;
   sabatinaSummary?: string;
+  checklist?: { item: string; status: string; doc?: string; hint?: string }[];
+  checklistAt?: number;
   updatedAt: number;
   opportunity?: Opportunity | null;
 }

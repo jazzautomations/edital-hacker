@@ -83,6 +83,11 @@ export default defineSchema({
     notes: v.optional(v.string()),
     sabatinaScore: v.optional(v.number()),
     sabatinaSummary: v.optional(v.string()),
+    // checklist de inscrição: exigência do edital × cofre do artista
+    checklist: v.optional(
+      v.array(v.object({ item: v.string(), status: v.string(), doc: v.optional(v.string()), hint: v.optional(v.string()) }))
+    ),
+    checklistAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_profile", ["profileId"])

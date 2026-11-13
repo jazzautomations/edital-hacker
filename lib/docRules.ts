@@ -28,7 +28,7 @@ export const DOC_RULES: DocRule[] = [
     emitUrl: "https://cndt-certidao.tst.jus.br/inicio.faces",
   },
   {
-    match: /cnd|rfb|dau|receita|federal/i,
+    match: /rfb|dau|receita|federal|^(?!.*(estadual|municipal|trabalh)).*\bcnd\b/i,
     validityDays: 180,
     hint: "Federal (RFB+DAU) vale 180 dias — emite cedo sem medo.",
     emitUrl: "https://solucoes.receita.fazenda.gov.br/servicos/cndrfbsppa/cndmobile.htm",

@@ -20,9 +20,10 @@ export async function POST(req: Request) {
   const profileEmail: string = profile.email;
   const fullCtx = (await convex.query(api.riders.coachContext, { profileId: profile._id })) as any;
 
-  const history = (fullCtx?.history ?? []).map((m: any) => ({
+  // histórico enxuto: as 10 últimas, cada uma cortada (resposta longa antiga só gasta cota)
+  const history = (fullCtx?.history ?? []).slice(-10).map((m: any) => ({
     role: m.role === "assistant" ? "assistant" : "user",
-    content: m.text,
+    content: String(m.text).slice(0, 700),
   }));
 
   let reply = "";

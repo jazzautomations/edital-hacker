@@ -79,6 +79,11 @@ export default function Coach() {
 
   // Histórico do servidor: carrega na abertura e de novo quando chega a
   // transcrição de uma chamada de voz (gravada ao desligar).
+  // /coach?msg=... (atalhos de outras telas) já chega com a pergunta escrita
+  useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get("msg");
+    if (m) setInput(m.slice(0, 500));
+  }, []);
   const voiceSeen = useRef(-1);
   useEffect(() => {
     const hist = (ctx?.history ?? []) as { role: Msg["role"]; text: string; via?: string }[];

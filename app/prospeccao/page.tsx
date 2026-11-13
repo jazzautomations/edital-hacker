@@ -82,6 +82,8 @@ export default function Prospeccao() {
 
   const prospect = useAction(api.discover.prospectLeads);
   const research = useAction(api.dossier.research);
+  const mapAgency = useAction(api.discover.mapAgency);
+  const [agencyMsg, setAgencyMsg] = useState<Record<string, string>>({});
   const seedMapa = useMutation(api.leads.seedMapa);
   const [dossierBusy, setDossierBusy] = useState<Set<string>>(new Set());
   const setStatus = useMutation(api.leads.setStatus);
@@ -322,6 +324,27 @@ export default function Prospeccao() {
               {dossierBusy.has(l._id) ? "Pesquisando" : l.dossier ? "Refazer dossiê" : "Quem agenda?"}
             </Button>
           )}
+          {l.kind === "agencia" && (
+            <Button size="sm" variant="ghost" loading={agencyMsg[l._id] === "…"} onClick={async () => {
+              setAgencyMsg((m) => ({ ...m, [l._id]: "…" }));
+              try {
+                const r = (await mapAgency({ profileId: profile._id as any, agency: l.name, niche: niche.trim() || "música", region: uf || undefined })) as { artists: string[]; found: number; error?: string };
+                setAgencyMsg((m) => ({
+                  ...m,
+                  [l._id]: r.error
+                    ? "Não deu pra mapear agora. Tenta de novo."
+                    : r.found
+                      ? `${r.found} contratantes de ${r.artists.slice(0, 3).join(", ")}${r.artists.length > 3 ? " e outros" : ""} entraram na lista.`
+                      : "Não achei contratantes verificáveis pelo casting dessa agência.",
+                }));
+              } catch {
+                setAgencyMsg((m) => ({ ...m, [l._id]: "Não deu pra mapear agora. Tenta de novo." }));
+              }
+            }}>
+              {agencyMsg[l._id] === "…" ? "Lendo o casting (2 a 4 min)" : "Onde o casting dela toca?"}
+            </Button>
+          )}
+          {agencyMsg[l._id] && agencyMsg[l._id] !== "…" && <p className="w-full text-xs text-neutral-400">{agencyMsg[l._id]}</p>}
           {contacted.has(l._id) ? (
             <span className="px-2 text-xs text-emerald-300">Salvo nos contatos</span>
           ) : (

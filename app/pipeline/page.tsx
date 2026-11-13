@@ -29,6 +29,9 @@ const STAGES: { key: string; label: string; hint: string }[] = [
   { key: "execucao", label: "Em execução", hint: "Projeto rodando" },
   { key: "prestacao", label: "Prestação de contas", hint: "Relatório e comprovantes" },
 ];
+const CHECK_LABEL: Record<string, string> = { ok: "tem", falta: "falta", vencido: "vencido", escrever: "escrever", emitir_perto: "emitir perto" };
+const CHECK_TONE: Record<string, string> = { ok: "text-emerald-400", falta: "text-red-400", vencido: "text-red-400", escrever: "text-amber-300", emitir_perto: "text-amber-300" };
+
 const ALL = [...STAGES, { key: "arquivado", label: "Arquivado", hint: "" }];
 
 export default function Pipeline() {
@@ -85,6 +88,34 @@ export default function Pipeline() {
             Testar na banca antes de inscrever
           </Link>
         )}
+        {i.checklist?.length ? (
+          <details className="mt-2.5 rounded-xl border border-neutral-800 px-3 py-2 text-xs">
+            <summary className="cursor-pointer font-semibold text-neutral-200">
+              Checklist {i.checklist.filter((c) => c.status === "ok").length}/{i.checklist.length} prontos
+            </summary>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {i.checklist.map((c, n) => (
+                <li key={n} className="flex gap-2 leading-snug">
+                  <span className={`shrink-0 font-mono text-[10px] uppercase ${CHECK_TONE[c.status] ?? "text-neutral-400"}`}>{CHECK_LABEL[c.status] ?? c.status}</span>
+                  <span className="text-neutral-300">
+                    {c.item}
+                    {c.hint ? <span className="block text-neutral-500">{c.hint}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {i.checklist.some((c) => c.status === "falta" || c.status === "vencido") && (
+              <Link href="/documentos" className="mt-2 inline-block font-semibold text-emerald-300 hover:underline">Mandar documentos</Link>
+            )}
+          </details>
+        ) : ["descoberta", "interessado", "inscrito"].includes(i.stage) ? (
+          <Link
+            href={`/coach?msg=${encodeURIComponent(`monta o checklist de inscrição do edital ${tidyTitle(o.name)}`)}`}
+            className="mt-2.5 block text-xs font-semibold text-emerald-300 hover:underline"
+          >
+            Montar checklist de documentos
+          </Link>
+        ) : null}
         {i.stage === "prestacao" && (
           <Link href="/prestacao" className="mt-2.5 inline-block text-xs font-semibold text-emerald-300 hover:underline">
             Montar relatório de execução

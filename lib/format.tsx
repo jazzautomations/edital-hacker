@@ -69,7 +69,7 @@ export function RichText({ text: raw }: { text: string }) {
     } else if (m[4] !== undefined) {
       out.push(<em key={k++}><RichText text={m[4]} /></em>);
     } else {
-      const route = m[3] ?? (m[2]?.match(/^\/[a-z]+$/) ? m[2] : null);
+      const route = m[3] ?? (m[2]?.match(/^\/[a-z]+$|^\/sabatina\/[a-z0-9]{16,}$/) ? m[2] : null);
       if (route) {
         out.push(
           <Link key={k++} href={route} className="font-medium text-emerald-300 underline decoration-emerald-500/40 underline-offset-2 hover:decoration-emerald-300">

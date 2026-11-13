@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { discoverOpportunities, discoverLeads } from "../lib/firecrawl";
+import { discoverOpportunities, discoverLeads, discoverAgencySources } from "../lib/firecrawl";
 
 // Instâncias Mapas com WAF bloqueando a API direta (403) — o agent do
 // Firecrawl navega pela infra deles e contorna.
@@ -95,6 +95,32 @@ export const prospectLeads = action({
       return { found: found.length, upserted };
     } catch (e) {
       return { found: 0, upserted: 0, error: String(e) };
+    }
+  },
+});
+
+/** Fonte da fonte: contratantes que compram show dos artistas de uma agência viram leads. */
+export const mapAgency = action({
+  args: { profileId: v.id("profiles"), agency: v.string(), niche: v.string(), region: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<{ artists: string[]; found: number; upserted: number; error?: string }> => {
+    try {
+      const r = await discoverAgencySources(args.agency, args.niche, args.region);
+      let upserted = 0;
+      for (const l of r.venues.slice(0, 30)) {
+        await ctx.runMutation(internal.leads.upsert, {
+          profileId: args.profileId,
+          name: l.name,
+          kind: l.type ?? "contratante",
+          city: (l as any).city,
+          sourceUrl: l.url,
+          contact: l.contact,
+          description: `Via agência ${r.agency ?? args.agency}: ${l.description ?? "contrata artistas do casting"}`.slice(0, 600),
+        });
+        upserted++;
+      }
+      return { artists: r.artists.slice(0, 20), found: r.venues.length, upserted };
+    } catch (e) {
+      return { artists: [], found: 0, upserted: 0, error: String(e).slice(0, 200) };
     }
   },
 });

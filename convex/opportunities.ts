@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
 export const list = query({
   args: {
@@ -118,5 +118,23 @@ export const setEnriched = internalMutation({
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { rawMarkdown: args.rawMarkdown, enriched: args.enriched });
+  },
+});
+
+const readingValidator = v.object({
+  summary: v.optional(v.string()),
+  eligibility: v.optional(v.string()),
+  disqualifiers: v.array(v.string()),
+  requiredDocs: v.array(v.string()),
+  rubric: v.array(v.object({ criterion: v.string(), weight: v.optional(v.string()) })),
+  deadlines: v.array(v.object({ label: v.string(), date: v.string() })),
+});
+
+/** Leitura do edital feita pelo coach no servidor do app (protegida pelo segredo do servidor). */
+export const saveReading = mutation({
+  args: { secret: v.string(), id: v.id("opportunities"), rawMarkdown: v.string(), enriched: readingValidator },
+  handler: async (ctx, args) => {
+    if (!process.env.NOTIFY_SECRET || args.secret !== process.env.NOTIFY_SECRET) throw new Error("não autorizado");
+    await ctx.db.patch(args.id, { rawMarkdown: args.rawMarkdown.slice(0, 200000), enriched: args.enriched });
   },
 });
