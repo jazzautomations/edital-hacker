@@ -33,6 +33,8 @@ export default function VoiceSabatina({
   mode?: "sabatina" | "coach";
 }) {
   const { token } = useAuthEmail();
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [agentOn, setAgentOn] = useState(false);
@@ -57,10 +59,15 @@ export default function VoiceSabatina({
     const agentId = agentIdRef.current;
     agentIdRef.current = null;
     if (agentId) {
-      void fetch(`/api/voice-session?agentId=${encodeURIComponent(agentId)}`, { method: "DELETE", keepalive: true }).catch(() => {});
+      void fetch(`/api/voice-session?agentId=${encodeURIComponent(agentId)}`, {
+        method: "DELETE",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: tokenRef.current, mode, opportunityId }),
+      }).catch(() => {});
     }
     setAgentOn(false);
-  }, []);
+  }, [mode, opportunityId]);
 
   // sai do canal se a página desmontar (navegação, refresh)
   useEffect(() => {

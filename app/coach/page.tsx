@@ -15,7 +15,7 @@ import { Badge, Button, Textarea, dataCurta } from "@/components/ui";
 // um mentor que sabe teus cachês, teus leads, teus prazos e tuas sabatinas
 // sem tu precisar repetir nada. O contexto inteiro vai no system prompt.
 
-type Msg = { role: "user" | "assistant"; text: string; actions?: string[] };
+type Msg = { role: "user" | "assistant"; text: string; actions?: string[]; via?: string };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -28,6 +28,8 @@ const SUGGESTIONS = [
 
 const ACTION_LABEL: Record<string, string> = {
   prospect_leads: "caçou leads na web",
+  buscar_editais: "buscou no radar",
+  salvar_edital: "salvou no pipeline",
   create_gig: "anotou na agenda",
   update_lead_status: "moveu lead no funil",
   prepare_document: "preparou documento",
@@ -75,10 +77,16 @@ export default function Coach() {
     if (d.redirectUrl) window.location.href = d.redirectUrl;
   };
 
+  // Histórico do servidor: carrega na abertura e de novo quando chega a
+  // transcrição de uma chamada de voz (gravada ao desligar).
+  const voiceSeen = useRef(-1);
   useEffect(() => {
-    if (ctx?.history?.length && msgs.length === 0) {
-      setMsgs(ctx.history.map((m: any) => ({ role: m.role, text: m.text })));
+    const hist = (ctx?.history ?? []) as { role: Msg["role"]; text: string; via?: string }[];
+    const voice = hist.filter((m) => m.via === "voz").length;
+    if ((msgs.length === 0 && hist.length) || (voiceSeen.current >= 0 && voice > voiceSeen.current)) {
+      setMsgs(hist.map((m) => ({ role: m.role, text: m.text, via: m.via })));
     }
+    if (ctx) voiceSeen.current = voice;
   }, [ctx, msgs.length]);
   useEffect(() => {
     // chaves: scrollIntoView() agora devolve Promise no Chromium e o React
@@ -187,6 +195,9 @@ export default function Coach() {
                 m.role === "user" ? "self-end bg-emerald-400 text-neutral-950" : "self-start border border-neutral-800 bg-neutral-900 text-neutral-200"
               }`}
             >
+              {m.via === "voz" && (
+                <p className={`mb-1 font-mono text-[10px] uppercase tracking-[0.15em] ${m.role === "user" ? "text-neutral-800" : "text-neutral-500"}`}>na chamada</p>
+              )}
               <p className="whitespace-pre-wrap">{m.role === "assistant" ? <RichText text={m.text} /> : m.text}</p>
               {m.actions?.length ? (
                 <p className="mt-2.5 flex flex-wrap gap-1.5 border-t border-neutral-800 pt-2.5">

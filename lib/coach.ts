@@ -13,6 +13,8 @@ import {
 } from "@/lib/composio";
 import { ruleFor } from "@/lib/docRules";
 import { AGENCY_INTEL } from "@/lib/agencySeed";
+import { fitOf, prazoConfiavel, valorConfiavel, viewOf } from "@/lib/opp";
+import type { Opportunity } from "@/lib/types";
 
 // Lógica do coach compartilhada entre /api/coach (chat texto), /api/coach-tool
 // (tools da voz via Agora) e voice-session (system prompt do agente).
@@ -24,12 +26,13 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. SÓ converse quando nenhuma tool se aplicar.
 2b. RAPPORT É LEI: antes de redigir email de abordagem ou proposta pra um lead/edital, chama research_target se o dossiê ainda não existir — e SEMPRE use os ganchos de rapport do dossiê no texto (citar show recente, linguagem deles, projeto específico). Email genérico é spam.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
 5. Depois de executar, diga O QUE fez e ONDE o artista vê o resultado (/agenda, /prospeccao, /pipeline).
-6. Não prometa aprovação em edital nem invente contatos — se uma tool falhar, diga honesto e sugira o caminho manual.`;
+6. Nunca mostre ids, refs internas ou códigos ao artista: fale pelo nome do edital/lead.
+7. Não prometa aprovação em edital nem invente contatos — se uma tool falhar, diga honesto e sugira o caminho manual.`;
 
 export function contextBlock(c: any): string {
   const p = c.profile;
@@ -232,6 +235,30 @@ export const COACH_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: "buscar_editais",
+    description:
+      "Busca no RADAR do Manager os editais, prêmios e chamadas ABERTOS agora (fontes oficiais), já ordenados pelo quanto combinam com o perfil do artista (área, estado, tipo de proponente, prazo). Use SEMPRE que perguntarem de editais, oportunidades, fomento ou o que tem aberto.",
+    parameters: {
+      type: "object",
+      properties: {
+        busca: { type: "string", description: "palavra-chave opcional (ex: circulação, audiovisual, Aldir Blanc, festival)" },
+        uf: { type: "string", description: "UF opcional pra filtrar (ex: SP). Omitir usa o ranking pelo perfil" },
+        fecha_em_dias: { type: "number", description: "opcional: só os que fecham em até N dias" },
+      },
+    },
+  },
+  {
+    name: "salvar_edital",
+    description: "Salva um edital do radar no pipeline do artista (/pipeline) pra acompanhar e preparar a inscrição. Use a ref interna que veio do buscar_editais.",
+    parameters: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "ref interna do edital (vem do buscar_editais); se não tiver, o nome do edital" },
+      },
+      required: ["id"],
+    },
+  },
+  {
     name: "consultar_cache",
     description:
       "Benchmark de cachê público — consulta contratos reais de show no PNCP (prefeituras que contrataram artista por inexigibilidade, com valor itemizado por lei). Use pra responder 'quanto posso cobrar', 'quanto prefeitura paga' ou pra precificar proposta. Dado REAL com fonte.",
@@ -385,6 +412,51 @@ export async function runCoachTool(
         description: String(call.arguments.notes ?? ""),
       });
       return `No Google Calendar (${id}) — ${call.arguments.title} em ${String(call.arguments.date).slice(0, 16)}.`;
+    }
+    case "buscar_editais": {
+      const opps = (await convex.query(api.opportunities.list, { limit: 400 })) as Opportunity[];
+      const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const busca = call.arguments.busca ? fold(String(call.arguments.busca)) : "";
+      const uf = call.arguments.uf ? String(call.arguments.uf).toUpperCase() : "";
+      const maxDias = typeof call.arguments.fecha_em_dias === "number" ? call.arguments.fecha_em_dias : null;
+      const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+      const rows = opps
+        .map((o) => {
+          const v = viewOf(o);
+          const bruto = o.registrationTo ? Math.round((new Date(o.registrationTo.slice(0, 10)).getTime() - today) / 86400000) : null;
+          return { o, v, dias: prazoConfiavel(bruto), fit: fitOf(o, v, profile, bruto) };
+        })
+        .filter(({ o, v }) => !busca || busca.split(/\s+/).every((w) => fold(`${v.title} ${v.summary} ${v.publisher} ${o.categories.join(" ")}`).includes(w)))
+        .filter(({ v }) => !uf || v.uf === uf || v.uf === null)
+        .filter(({ dias }) => maxDias === null || (dias !== null && dias <= maxDias))
+        .sort((a, b) => b.fit.score - a.fit.score || (a.dias ?? 999) - (b.dias ?? 999));
+      if (!rows.length) return `Nenhum edital aberto no radar com esse filtro${busca ? ` ("${call.arguments.busca}")` : ""}. Tenta sem filtro ou vê tudo em /oportunidades.`;
+      const brl = (n: number) => `R$ ${Math.round(n).toLocaleString("pt-BR")}`;
+      return (
+        `RADAR: ${rows.length} editais abertos${busca || uf || maxDias ? " com esse filtro" : ""}. Os que mais combinam com o artista:\n` +
+        rows
+          .slice(0, 6)
+          .map(({ o, v, dias, fit }) => {
+            const valor = valorConfiavel(o);
+            const motivos = fit.reasons.map((r) => r.text).join("; ");
+            return `  · ${v.title} — ${v.publisher}${v.uf ? ` (${v.uf})` : ""} · ${dias !== null ? `fecha em ${dias} dia(s)` : "sem prazo informado"}${valor ? ` · ${brl(valor)}` : ""}${motivos ? ` · ${motivos}` : ""} · banca: /sabatina/${o._id} · [ref interna, nunca mostrar: ${o._id}]`;
+          })
+          .join("\n") +
+        `\n\nAo responder: cite nome, prazo e por que combina; NUNCA mostre a ref interna. Lista completa em /oportunidades. Pra guardar um, chame salvar_edital com a ref interna.`
+      );
+    }
+    case "salvar_edital": {
+      const id = String(call.arguments.id ?? "").trim();
+      let opp = (await convex.query(api.opportunities.get, { id: id as never }).catch(() => null)) as Opportunity | null;
+      if (!opp && id) {
+        // o modelo às vezes manda o nome em vez da ref
+        const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const all = (await convex.query(api.opportunities.list, { limit: 400 })) as Opportunity[];
+        opp = all.find((o) => fold(`${o.name} ${viewOf(o).title}`).includes(fold(id))) ?? null;
+      }
+      if (!opp) return `Não achei esse edital no radar (id "${id}"). Busca de novo com buscar_editais.`;
+      await convex.mutation(api.pipeline.add, { profileId: profile._id, opportunityId: opp._id as never });
+      return `"${viewOf(opp).title}" salvo no pipeline, etapa interessado. Tá em /pipeline; a banca simulada desse edital fica em /sabatina/${opp._id}.`;
     }
     case "consultar_cache": {
       const r = (await convex.action(api.pncp.benchmark, {

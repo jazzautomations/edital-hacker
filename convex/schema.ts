@@ -244,6 +244,16 @@ export default defineSchema({
     profileId: v.id("profiles"),
     role: v.string(), // user | assistant
     text: v.string(),
+    via: v.optional(v.string()), // "voz" quando veio de uma chamada
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+
+  // Transcrição de cada chamada de voz (coach ou sabatina), gravada ao desligar.
+  voiceCalls: defineTable({
+    profileId: v.id("profiles"),
+    mode: v.string(), // coach | sabatina
+    opportunityId: v.optional(v.id("opportunities")),
+    turns: v.array(v.object({ role: v.string(), text: v.string() })),
     createdAt: v.number(),
   }).index("by_profile", ["profileId"]),
 

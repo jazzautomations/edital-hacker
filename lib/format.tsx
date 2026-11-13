@@ -58,7 +58,7 @@ function flattenTables(text: string): string {
 export function RichText({ text: raw }: { text: string }) {
   const text = flattenTables(raw);
   const out: ReactNode[] = [];
-  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinatura|documentos|inicio|epk))\b|(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g;
+  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/sabatina\/[a-z0-9]{16,}|\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinatura|documentos|inicio|epk)\b)|(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
@@ -73,7 +73,7 @@ export function RichText({ text: raw }: { text: string }) {
       if (route) {
         out.push(
           <Link key={k++} href={route} className="font-medium text-emerald-300 underline decoration-emerald-500/40 underline-offset-2 hover:decoration-emerald-300">
-            {ROUTE_LABEL[route] ?? route.slice(1)}
+            {route.startsWith("/sabatina/") ? "treinar a banca" : (ROUTE_LABEL[route] ?? route.slice(1))}
           </Link>
         );
       } else {

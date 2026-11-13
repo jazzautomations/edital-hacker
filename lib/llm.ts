@@ -126,6 +126,10 @@ export function providers(): Provider[] {
           model: e.GROQ_MODEL ?? "openai/gpt-oss-120b",
         }
       : null,
+    // cada modelo do Groq tem a própria cota por minuto: mais modelos = mais fôlego
+    ...["qwen/qwen3.8-27b", "openai/gpt-oss-20b"].map((model) =>
+      e.GROQ_API_KEY ? { name: `groq:${model}`, apiKey: e.GROQ_API_KEY, baseUrl: "https://api.groq.com/openai/v1", model } : null
+    ),
     e.OPENAI_API_KEY && e.LLM_BASE_URL?.includes("openai.com") !== true
       ? { name: "openai", apiKey: e.OPENAI_API_KEY, baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini" }
       : null,
@@ -136,8 +140,11 @@ export function providers(): Provider[] {
 const RETRYABLE = new Set([401, 403, 404, 408, 429, 500, 502, 503, 504]);
 
 /** POST /chat/completions com fallback entre provedores. Devolve o Response ok. */
-export async function completions(body: Record<string, unknown>, timeoutMs = 15000): Promise<Response> {
-  const chain = providers();
+export async function completions(body: Record<string, unknown>, timeoutMs = 15000, pin?: string): Promise<Response & { provider?: string }> {
+  // pin: no meio de um loop de tools, a conversa fica no mesmo provedor
+  // (o Gemini exige a thought_signature que só ele gerou).
+  const all = providers();
+  const chain = pin ? all.filter((p) => p.name === pin) : all;
   if (!chain.length) throw new Error("LLM_API_KEY not set");
   let lastErr = "";
   for (const p of chain) {
@@ -148,7 +155,7 @@ export async function completions(body: Record<string, unknown>, timeoutMs = 150
         body: JSON.stringify({ ...body, model: p.model }),
         signal: AbortSignal.timeout(timeoutMs),
       });
-      if (res.ok) return res;
+      if (res.ok) return Object.assign(res, { provider: p.name });
       lastErr = `${p.name} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`;
       if (!RETRYABLE.has(res.status)) break;
     } catch (err) {
@@ -197,19 +204,28 @@ export async function chatWithTools(
   const actionsRun: { name: string; result: string }[] = [];
   const msgs: any[] = [...messages];
 
+  let pin: string | undefined;
   for (let round = 0; round < 4; round++) {
-    const res = await completions({
-      messages: msgs,
-      temperature: 0.4,
-      tools: tools.map((t) => ({ type: "function", function: t })),
-    });
+    const body = { messages: msgs, temperature: 0.4, tools: tools.map((t) => ({ type: "function", function: t })) };
+    let res: Response & { provider?: string };
+    try {
+      res = await completions(body, 15000, pin);
+    } catch (e) {
+      if (!pin) throw e;
+      // o provedor da 1ª rodada caiu: os outros recebem a conversa sem os campos próprios dele
+      pin = undefined;
+      for (const m of msgs) if (m.role === "assistant") delete m.extra_content;
+      res = await completions(body);
+    }
+    pin = res.provider;
     const msg = (await res.json()).choices?.[0]?.message;
     if (!msg) break;
 
     const calls = msg.tool_calls ?? [];
     if (!calls.length) return { reply: msg.content ?? "", actionsRun };
 
-    msgs.push({ role: "assistant", content: msg.content ?? null, tool_calls: calls });
+    // devolve a mensagem inteira (inclui extra_content/thought_signature do Gemini)
+    msgs.push({ ...msg, role: "assistant", content: msg.content ?? null, tool_calls: calls });
     for (const c of calls) {
       const name = c.function?.name ?? "";
       let args: Record<string, unknown> = {};

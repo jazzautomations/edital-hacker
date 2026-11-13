@@ -190,6 +190,7 @@ export async function POST(req: Request) {
 }
 
 // Encerra o agente na hora (sem isso ele fica até o idle_timeout gastando crédito).
+// Antes de desligar, puxa o histórico da conversa e grava a transcrição no perfil.
 export async function DELETE(req: Request) {
   const appId = process.env.AGORA_APP_ID;
   const customerId = process.env.AGORA_CUSTOMER_ID;
@@ -197,12 +198,41 @@ export async function DELETE(req: Request) {
   const agentId = new URL(req.url).searchParams.get("agentId") ?? "";
   if (!appId || !customerId || !customerSecret) return NextResponse.json({ ok: false }, { status: 503 });
   if (!/^[A-Za-z0-9]{8,64}$/.test(agentId)) return NextResponse.json({ error: "agentId inválido" }, { status: 400 });
+  const { token, mode, opportunityId } = (await req.json().catch(() => ({}))) as {
+    token?: string;
+    mode?: string;
+    opportunityId?: string;
+  };
+  const auth = { Authorization: `Basic ${Buffer.from(`${customerId}:${customerSecret}`).toString("base64")}` };
+
+  let saved = false;
+  if (token) {
+    try {
+      const h = await fetch(`${AGENT_API}/${appId}/agents/${agentId}/history`, { headers: auth });
+      const data = h.ok ? ((await h.json()) as { contents?: { role?: string; content?: unknown }[] }) : null;
+      const turns = (data?.contents ?? [])
+        .filter((c) => (c.role === "user" || c.role === "assistant") && typeof c.content === "string")
+        .map((c) => ({ role: String(c.role), text: String(c.content) }));
+      if (turns.length) {
+        const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+        await convex.mutation(api.voice.saveCall, {
+          token,
+          mode: mode === "sabatina" ? "sabatina" : "coach",
+          opportunityId: (opportunityId || undefined) as never,
+          turns,
+        });
+        saved = true;
+      } else if (!h.ok) {
+        console.error("[voice history]", h.status, await h.text().catch(() => ""));
+      }
+    } catch (e) {
+      console.error("[voice history]", e);
+    }
+  }
+
   const r = await fetch(`${AGENT_API}/${appId}/agents/${agentId}/leave`, {
     method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${customerId}:${customerSecret}`).toString("base64")}`,
-      "Content-Type": "application/json",
-    },
+    headers: { ...auth, "Content-Type": "application/json" },
   }).catch(() => null);
-  return NextResponse.json({ ok: Boolean(r?.ok) });
+  return NextResponse.json({ ok: Boolean(r?.ok), saved });
 }
