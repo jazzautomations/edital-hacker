@@ -10,6 +10,7 @@ import type { Opportunity, Profile } from "@/lib/types";
 import { tidyTitle } from "@/lib/format";
 import { fitOf, prazoConfiavel, viewOf } from "@/lib/opp";
 import { SignIn } from "@/components/SignIn";
+import { WelcomeCoach } from "@/components/WelcomeCoach";
 import { Badge, Card, LinkButton, Notice, Page, SectionTitle, Skeleton, brl, dataCurta, diasAte } from "@/components/ui";
 
 type Ctx = {
@@ -122,13 +123,7 @@ export default function Inicio() {
 
   return (
     <Page width="max-w-6xl">
-      {welcome && (
-        <div className="mb-6">
-          <Notice tone="good">
-            <b>Perfil criado.</b> O radar já está filtrando o que aceita {profile.personType.toLowerCase()} em {profile.uf ?? "todo o Brasil"}. Teus próximos passos estão logo abaixo.
-          </Notice>
-        </div>
-      )}
+      {welcome && <WelcomeCoach token={token} studied={Boolean((profile as Profile & { careerIntelAt?: number }).careerIntelAt)} />}
 
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>

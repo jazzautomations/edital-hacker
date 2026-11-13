@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { useAuthEmail } from "@/lib/useAuth";
 import { useMyProfile } from "@/lib/useProfile";
@@ -31,7 +31,14 @@ const GOALS = [
 
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
 
-const STEPS = ["Quem é você", "O que você faz", "Onde atua", "Teu objetivo"];
+const STEPS = ["Quem é você", "O que você faz", "Onde atua", "Tua trajetória", "Tua formação", "Teu objetivo"];
+
+const STAGES = [
+  { id: "comecando", title: "Tô começando", hint: "Poucos shows, ainda montando repertório e material" },
+  { id: "circulando", title: "Já circulo", hint: "Faço shows com frequência, quero crescer e profissionalizar" },
+  { id: "consolidado", title: "Carreira consolidada", hint: "Agenda cheia, quero escala, editais grandes e agência" },
+];
+const blankMember = () => ({ name: "", role: "", phone: "" });
 
 function Choice({
   selected,
@@ -89,15 +96,25 @@ function Onboarding() {
   const [uf, setUf] = useState("");
   const [phone, setPhone] = useState("");
   const [goals, setGoals] = useState<string[]>([]);
+  const [insta, setInsta] = useState("");
+  const [music, setMusic] = useState("");
+  const [site, setSite] = useState("");
+  const [stage, setStage] = useState("");
+  const [wonEdital, setWonEdital] = useState<boolean | null>(null);
+  const [solo, setSolo] = useState(false);
+  const [team, setTeam] = useState([blankMember(), blankMember()]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
+  // ao salvar, o perfil vira "onboarded" na hora e o efeito abaixo redirecionaria
+  // sem o ?bemvindo — quem redireciona nesse caso é o finish()
+  const finishing = useRef(false);
 
   const safeBack = back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/comecar") ? back : "/inicio";
 
   // quem já tem perfil completo não refaz o onboarding; perfil antigo vem pré-preenchido
   useEffect(() => {
-    if (!profile || prefilled) return;
+    if (!profile || prefilled || finishing.current) return;
     if (profile.onboardedAt) {
       router.replace(safeBack);
       return;
@@ -110,6 +127,9 @@ function Onboarding() {
     if (profile.city) setCity(profile.city);
     if (profile.uf) setUf(profile.uf);
     if (profile.phone) setPhone(profile.phone);
+    const pp = profile as Profile & { team?: { name: string; role?: string; phone?: string }[]; stage?: string };
+    if (pp.team?.length) setTeam(pp.team.map((m) => ({ name: m.name, role: m.role ?? "", phone: m.phone ?? "" })));
+    if (pp.stage) setStage(pp.stage);
   }, [profile, prefilled, router, safeBack]);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
@@ -117,9 +137,23 @@ function Onboarding() {
 
   const allAreas = [...areas, ...(otherArea.trim() ? [otherArea.trim()] : [])];
   const canNext =
-    step === 0 ? name.trim().length >= 2 : step === 1 ? allAreas.length > 0 : step === 2 ? city.trim().length >= 2 && uf : goals.length > 0;
+    step === 0 ? name.trim().length >= 2
+    : step === 1 ? allAreas.length > 0
+    : step === 2 ? city.trim().length >= 2 && uf
+    : step === 3 ? Boolean(stage)
+    : step === 4 ? true
+    : goals.length > 0;
+
+  // @fulano → link do Instagram; o resto vira URL com https
+  const asUrl = (raw: string, kind?: "insta") => {
+    const t = raw.trim();
+    if (!t) return null;
+    if (kind === "insta" && !t.includes(".")) return `https://www.instagram.com/${t.replace(/^@/, "")}/`;
+    return /^https?:\/\//.test(t) ? t : `https://${t}`;
+  };
 
   async function finish() {
+    finishing.current = true;
     setSaving(true);
     setErr(null);
     try {
@@ -132,11 +166,17 @@ function Onboarding() {
         uf,
         phone: phone.trim() || undefined,
         goals,
+        stage: stage || undefined,
+        wonEdital: wonEdital ?? undefined,
+        socialLinks: [asUrl(insta, "insta"), asUrl(music), asUrl(site)].filter((x): x is string => Boolean(x)),
+        portfolioUrl: asUrl(site) ?? undefined,
+        team: solo ? [] : team.filter((m) => m.name.trim()).map((m) => ({ name: m.name.trim(), role: m.role.trim() || undefined, phone: m.phone.trim() || undefined })),
         onboarded: true,
       });
       router.replace(safeBack === "/inicio" ? "/inicio?bemvindo=1" : safeBack);
     } catch (e) {
       setErr("Não consegui salvar agora. Confere a conexão e tenta de novo.");
+      finishing.current = false;
       setSaving(false);
     }
   }
@@ -277,6 +317,57 @@ function Onboarding() {
           )}
 
           {step === 3 && (
+            <div className="flex flex-col gap-6">
+              <div>
+                <h1 className="text-4xl text-neutral-50 sm:text-5xl">Me mostra teu trabalho</h1>
+                <p className="mt-3 text-neutral-400">Eu leio teus links e pesquiso teu nome na web, pra chegar no coach já sabendo quem você é. Tudo opcional.</p>
+              </div>
+              <div className="grid gap-3">
+                <Field label="Instagram"><Input value={insta} onChange={(e) => setInsta(e.target.value)} placeholder="@teuperfil" autoCapitalize="none" /></Field>
+                <Field label="Spotify, YouTube ou SoundCloud"><Input value={music} onChange={(e) => setMusic(e.target.value)} placeholder="Cola o link" inputMode="url" autoCapitalize="none" /></Field>
+                <Field label="Site ou portfólio"><Input value={site} onChange={(e) => setSite(e.target.value)} placeholder="teusite.com.br" inputMode="url" autoCapitalize="none" /></Field>
+              </div>
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1.5 text-sm font-medium text-neutral-200">Em que momento tua carreira está?</legend>
+                {STAGES.map((st) => (
+                  <Choice key={st.id} selected={stage === st.id} onClick={() => setStage(st.id)} title={st.title} hint={st.hint} />
+                ))}
+              </fieldset>
+              <fieldset className="flex flex-wrap items-center gap-2">
+                <legend className="mb-1.5 w-full text-sm font-medium text-neutral-200">Já ganhou algum edital?</legend>
+                {([[true, "Sim"], [false, "Ainda não"]] as const).map(([val, label]) => (
+                  <button key={label} type="button" aria-pressed={wonEdital === val} onClick={() => setWonEdital(val)}
+                    className={`rounded-full border px-4 py-2 text-sm ${wonEdital === val ? "border-emerald-400 bg-emerald-400 font-semibold text-neutral-950" : "border-neutral-700 text-neutral-200 hover:border-neutral-500"}`}>
+                    {label}
+                  </button>
+                ))}
+              </fieldset>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="flex flex-col gap-6">
+              <div>
+                <h1 className="text-4xl text-neutral-50 sm:text-5xl">Quem toca contigo?</h1>
+                <p className="mt-3 text-neutral-400">Edital pede declaração e assinatura de cada integrante. Com o nome e o WhatsApp, eu peço os dados e as assinaturas por você.</p>
+              </div>
+              <Choice selected={solo} onClick={() => setSolo(!solo)} title="Sou solo" hint="Pula este passo" />
+              {!solo && (
+                <div className="flex flex-col gap-2">
+                  {team.map((m, i) => (
+                    <div key={i} className="grid grid-cols-2 gap-2 rounded-xl border border-neutral-800 p-3 sm:grid-cols-[1.4fr_1fr_1fr]">
+                      <Input aria-label={`Nome do integrante ${i + 1}`} className="col-span-2 sm:col-span-1" value={m.name} placeholder="Nome" onChange={(e) => setTeam((t) => t.map((x, n) => (n === i ? { ...x, name: e.target.value } : x)))} />
+                      <Input aria-label={`Função do integrante ${i + 1}`} value={m.role} placeholder="Função" onChange={(e) => setTeam((t) => t.map((x, n) => (n === i ? { ...x, role: e.target.value } : x)))} />
+                      <Input aria-label={`WhatsApp do integrante ${i + 1}`} inputMode="tel" value={m.phone} placeholder="WhatsApp" onChange={(e) => setTeam((t) => t.map((x, n) => (n === i ? { ...x, phone: e.target.value } : x)))} />
+                    </div>
+                  ))}
+                  <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => setTeam((t) => [...t, blankMember()])}>+ integrante</Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 5 && (
             <div className="flex flex-col gap-6">
               <div>
                 <h1 className="text-4xl text-neutral-50 sm:text-5xl">O que você quer destravar primeiro?</h1>

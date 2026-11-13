@@ -69,7 +69,12 @@ export function SignaturesPanel() {
         <p className="max-w-2xl text-sm text-neutral-400">
           Declaração de edital, anuência dos integrantes, carta de compromisso: cada pessoa recebe um link, completa os dados e assina com o dedo. No fim sai um PDF só, assinado por todos.
         </p>
-        <Button onClick={() => setOpen((o) => !o)}>{open ? "Fechar" : "Novo documento"}</Button>
+        <Button onClick={() => {
+          // a banda do cadastro já entra como quem assina
+          const team = (profile as { team?: { name: string; role?: string; phone?: string }[] }).team;
+          if (!open && team?.length && people.every((p) => !p.name)) setPeople(team.map((m) => ({ name: m.name, role: m.role ?? "", phone: m.phone ?? "" })));
+          setOpen((o) => !o);
+        }}>{open ? "Fechar" : "Novo documento"}</Button>
       </div>
 
       {open && (

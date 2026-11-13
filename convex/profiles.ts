@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalQuery, mutation, query } from "./_generated/server";
 import { emailOfSession } from "./auth";
 
@@ -79,6 +80,10 @@ export const upsert = mutation({
     videoUrl: v.optional(v.string()),
     musicLinks: v.optional(v.array(v.string())),
     goals: v.optional(v.array(v.string())),
+    stage: v.optional(v.string()),
+    wonEdital: v.optional(v.boolean()),
+    socialLinks: v.optional(v.array(v.string())),
+    team: v.optional(v.array(v.object({ name: v.string(), role: v.optional(v.string()), phone: v.optional(v.string()) }))),
     onboarded: v.optional(v.boolean()),
   },
   handler: async (ctx, { onboarded, token, ...fields }) => {
@@ -97,9 +102,13 @@ export const upsert = mutation({
         Object.entries(args).filter(([, val]) => val !== undefined && val !== "" && !(Array.isArray(val) && val.length === 0))
       );
       await ctx.db.patch(existing._id, { ...patch, ...(existing.onboardedAt ? {} : stamp) });
+      // terminou o onboarding agora: o Manager estuda o artista e o coach já chega com diagnóstico
+      if (onboarded && !existing.onboardedAt) await ctx.scheduler.runAfter(0, internal.onboard.study, { profileId: existing._id });
       return existing._id;
     }
-    return await ctx.db.insert("profiles", { ...args, ...stamp, plan: "free", createdAt: Date.now() });
+    const id = await ctx.db.insert("profiles", { ...args, ...stamp, plan: "free", createdAt: Date.now() });
+    if (onboarded) await ctx.scheduler.runAfter(0, internal.onboard.study, { profileId: id });
+    return id;
   },
 });
 

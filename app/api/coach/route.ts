@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { chatWithTools, llmConfigured } from "@/lib/llm";
-import { COACH_SYSTEM, COACH_TOOLS, contextBlock, runCoachTool } from "@/lib/coach";
+import { COACH_SYSTEM, COACH_TOOLS, contextBlock, runCoachTool, scrubInternal } from "@/lib/coach";
 
 export async function POST(req: Request) {
   if (!llmConfigured()) {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   }
 
   const finalReply =
-    reply ||
+    scrubInternal(reply) ||
     (actionsRun.length
       ? `Feito: ${actionsRun.map((a) => a.result).join(" · ")}`
       : "Não consegui responder agora — tenta de novo?");

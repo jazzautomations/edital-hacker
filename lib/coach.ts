@@ -46,6 +46,11 @@ export function contextBlock(c: any): string {
     `ARTISTA: ${p.name} (${p.personType})${p.city || p.uf ? ` — ${[p.city, p.uf].filter(Boolean).join("/")}` : ""}`,
     p.artAreas?.length ? `Áreas: ${p.artAreas.join(", ")}` : null,
     p.phone ? `Telefone: ${p.phone}` : null,
+    p.stage ? `Momento: ${({ comecando: "começando", circulando: "já circula, quer crescer", consolidado: "consolidado" } as Record<string, string>)[p.stage] ?? p.stage}${p.wonEdital === true ? " · já ganhou edital" : p.wonEdital === false ? " · nunca ganhou edital" : ""}` : null,
+    p.goals?.length ? `Quer: ${p.goals.join(", ")}` : null,
+    p.team?.length ? `FORMAÇÃO: ${p.team.map((m: any) => `${m.name}${m.role ? ` (${m.role})` : ""}${m.phone ? ` · zap ${m.phone}` : ""}`).join("; ")} — use esses nomes/WhatsApps em preparar_assinaturas sem perguntar de novo` : null,
+    p.bio ? `Bio: ${String(p.bio).slice(0, 400)}` : null,
+    p.careerIntel ? `O QUE O MANAGER JÁ SABE DO ARTISTA (pesquisa dos links e da web):\n${String(p.careerIntel).slice(0, 1500)}` : null,
     "",
   ];
 
@@ -823,4 +828,16 @@ export function buildChecklist(required: string[], docs: any[], registrationTo?:
     if (rule?.validityDays && rule.validityDays <= 30) return { item, status: "emitir_perto", doc: doc.name, hint: rule.hint };
     return { item, status: "ok", doc: doc.name };
   });
+}
+
+/** O modelo às vezes vaza nome de ferramenta e ref interna no texto: some com isso antes de mostrar. */
+export function scrubInternal(text: string): string {
+  const names = COACH_TOOLS.map((t) => t.name).join("|");
+  return text
+    .replace(new RegExp(`\\s*\\((?:[^()]*\\b(?:${names})\\b[^()]*)\\)`, "g"), "")
+    .replace(new RegExp(`\\b(?:${names})\\b`, "g"), "")
+    .replace(/(?<!\/sabatina\/)\b[a-z0-9]{32}\b/g, "")
+    .replace(/\[ref interna[^\]]*\]/gi, "")
+    .replace(/[ \t]+([.,;:])/g, "$1")
+    .replace(/\(\s*\)/g, "");
 }

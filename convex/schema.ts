@@ -53,6 +53,12 @@ export default defineSchema({
     videoUrl: v.optional(v.string()),
     musicLinks: v.optional(v.array(v.string())),
     goals: v.optional(v.array(v.string())), // o que busca: editais, shows, aulas…
+    stage: v.optional(v.string()), // comecando | circulando | consolidado
+    wonEdital: v.optional(v.boolean()),
+    socialLinks: v.optional(v.array(v.string())), // instagram, spotify, youtube, site
+    team: v.optional(v.array(v.object({ name: v.string(), role: v.optional(v.string()), phone: v.optional(v.string()) }))),
+    careerIntel: v.optional(v.string()), // o que o Manager descobriu lendo os links e a web
+    careerIntelAt: v.optional(v.number()),
     onboardedAt: v.optional(v.number()),
     plan: v.string(),
     createdAt: v.number(),
