@@ -176,7 +176,8 @@ export default defineSchema({
   pixCharges: defineTable({
     pixId: v.string(),
     profileId: v.id("profiles"),
-    opportunityId: v.id("opportunities"),
+    opportunityId: v.optional(v.id("opportunities")), // destrava edital
+    pack: v.optional(v.string()), // ou pacote avulso (voz30, prosp5)
     amount: v.number(),
     status: v.string(), // PENDING | PAID | EXPIRED | CANCELLED
     createdAt: v.number(),
@@ -321,6 +322,11 @@ export default defineSchema({
     .index("by_msg", ["msgId"])
     .index("by_instance", ["instance", "at"]),
   signLinks: defineTable({ token: v.string(), docId: v.id("signDocs"), order: v.number() }).index("by_token", ["token"]),
+
+  // Uso por período (limites do plano) e créditos de pacote avulso
+  usage: defineTable({ profileId: v.id("profiles"), kind: v.string(), period: v.string(), used: v.number() }).index("by_profile_kind_period", ["profileId", "kind", "period"]),
+  credits: defineTable({ profileId: v.id("profiles"), kind: v.string(), balance: v.number() }).index("by_profile_kind", ["profileId", "kind"]),
+  voiceSessions: defineTable({ agentId: v.string(), profileId: v.id("profiles"), mode: v.string(), startedAt: v.number(), endedAt: v.optional(v.number()) }).index("by_agent", ["agentId"]),
 
   // Transcrição de cada chamada de voz (coach ou sabatina), gravada ao desligar.
   voiceCalls: defineTable({

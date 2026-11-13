@@ -3,6 +3,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 import type { Id } from "./_generated/dataModel";
 import { emailOfSession } from "./auth";
 import { internal } from "./_generated/api";
+import { consume } from "./usage";
 
 function newToken(): string {
   const b = new Uint8Array(18);
@@ -35,6 +36,8 @@ async function insertDoc(
       status: "pendente",
     }));
   if (!signers.length) throw new Error("precisa de pelo menos 1 pessoa pra assinar");
+  const q = await consume(ctx, profileId, "sign_doc");
+  if (!q.ok) throw new Error(`Limite do plano: ${q.limit} documento(s) pra assinar por mês. Sobe de plano em /assinatura.`);
   const id = await ctx.db.insert("signDocs", {
     profileId,
     opportunityId: a.opportunityId,

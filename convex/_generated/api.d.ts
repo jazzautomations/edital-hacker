@@ -35,6 +35,7 @@ import type * as replyDetect from "../replyDetect.js";
 import type * as riders from "../riders.js";
 import type * as sabatina from "../sabatina.js";
 import type * as signDocs from "../signDocs.js";
+import type * as usage from "../usage.js";
 import type * as voice from "../voice.js";
 import type * as zap from "../zap.js";
 
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   riders: typeof riders;
   sabatina: typeof sabatina;
   signDocs: typeof signDocs;
+  usage: typeof usage;
   voice: typeof voice;
   zap: typeof zap;
 }>;

@@ -50,6 +50,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "sessão inválida" }, { status: 401 });
   }
   const profileEmail: string = profile.email;
+  const secret = process.env.NOTIFY_SECRET ?? "";
+  const minutesLeft = (await convex.query(api.usage.voiceRemaining, { secret, profileId: profile._id })) as number;
+  if (minutesLeft <= 0) {
+    return NextResponse.json(
+      { error: "Teus minutos de voz deste mês acabaram. Dá pra comprar +30 minutos ou subir de plano em /assinatura. O coach por texto continua aqui.", limit: true },
+      { status: 402 }
+    );
+  }
 
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   let system: string;
@@ -196,6 +204,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Agora join HTTP ${joinRes.status}: ${err}` }, { status: 502 });
   }
   const agent = await joinRes.json();
+  await convex.mutation(api.usage.voiceStart, { secret, profileId: profile._id, agentId: String(agent.agent_id), mode }).catch(() => {});
 
   return NextResponse.json({
     appId,
@@ -203,6 +212,7 @@ export async function POST(req: Request) {
     uid: userUid,
     token: rtcToken(appId, process.env.AGORA_APP_CERTIFICATE, channel, userUid),
     agentId: agent.agent_id,
+    maxSeconds: minutesLeft * 60,
   });
 }
 
@@ -246,6 +256,10 @@ export async function DELETE(req: Request) {
       console.error("[voice history]", e);
     }
   }
+
+  // cobra os minutos pelo relógio do servidor (uma vez só, mesmo com DELETE repetido)
+  const convexBill = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+  await convexBill.mutation(api.usage.voiceEnd, { secret: process.env.NOTIFY_SECRET ?? "", agentId }).catch(() => {});
 
   const r = await fetch(`${AGENT_API}/${appId}/agents/${agentId}/leave`, {
     method: "POST",

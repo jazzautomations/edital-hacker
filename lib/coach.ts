@@ -428,7 +428,9 @@ export async function runCoachTool(
         city: String(call.arguments.city ?? ""),
         uf: call.arguments.uf ? String(call.arguments.uf) : undefined,
       })) as any;
-      return r?.error
+      return r?.limit
+        ? `O plano do artista chegou no limite de prospecções do mês (${r.error}). Diga isso e ofereça o pacote +5 prospecções ou subir de plano em /assinatura.`
+        : r?.error
         ? `Prospecção falhou: ${r.error}`
         : `Encontrados ${r.found} leads, ${r.upserted} entraram no funil em /prospeccao`;
     }

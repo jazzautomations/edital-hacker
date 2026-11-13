@@ -79,7 +79,9 @@ export const prospectLeads = action({
     city: v.string(),
     uf: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<{ found: number; upserted: number; error?: string }> => {
+  handler: async (ctx, args): Promise<{ found: number; upserted: number; error?: string; limit?: boolean }> => {
+    const q = (await ctx.runMutation(internal.usage.consumeInternal, { profileId: args.profileId, kind: "prospect" })) as { ok: boolean; limit: number };
+    if (!q.ok) return { found: 0, upserted: 0, limit: true, error: `limite do plano: ${q.limit} prospecção(ões) por mês` };
     try {
       const found = await discoverLeads(args.leadType, args.niche, args.city, args.uf);
       let upserted = 0;
@@ -107,7 +109,9 @@ export const prospectLeads = action({
 /** Fonte da fonte: contratantes que compram show dos artistas de uma agência viram leads. */
 export const mapAgency = action({
   args: { profileId: v.id("profiles"), agency: v.string(), niche: v.string(), region: v.optional(v.string()) },
-  handler: async (ctx, args): Promise<{ artists: string[]; found: number; upserted: number; error?: string }> => {
+  handler: async (ctx, args): Promise<{ artists: string[]; found: number; upserted: number; error?: string; limit?: boolean }> => {
+    const q = (await ctx.runMutation(internal.usage.consumeInternal, { profileId: args.profileId, kind: "agency_map" })) as { ok: boolean; limit: number };
+    if (!q.ok) return { artists: [], found: 0, upserted: 0, limit: true, error: q.limit ? `limite do plano: ${q.limit} por mês` : "o plano grátis não inclui mapear agência" };
     try {
       const r = await discoverAgencySources(args.agency, args.niche, args.region);
       let upserted = 0;

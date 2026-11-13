@@ -41,8 +41,18 @@ export default function VoiceSabatina({
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micRef = useRef<IMicrophoneAudioTrack | null>(null);
   const agentIdRef = useRef<string | null>(null);
+  const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [left, setLeft] = useState<number | null>(null);
+  // contagem regressiva visível só no último minuto
+  useEffect(() => {
+    if (left === null || left <= 0) return;
+    const t = setTimeout(() => setLeft((n) => (n === null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [left]);
 
   const cleanup = useCallback(async () => {
+    if (limitTimer.current) { clearTimeout(limitTimer.current); limitTimer.current = null; }
+    setLeft(null);
     try {
       micRef.current?.close();
     } catch {
@@ -88,6 +98,7 @@ export default function VoiceSabatina({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 402) throw new Error(data.error ?? "Teus minutos de voz acabaram. Vê os pacotes em /assinatura.");
         if (res.status === 503) {
           throw new Error(
             "Voz ainda não configurada no servidor — faltam as chaves AGORA_* no .env."
@@ -138,6 +149,12 @@ export default function VoiceSabatina({
         return;
       }
       setStatus("live");
+      // acabou a franquia de minutos: desliga sozinho
+      const maxS = Number((data as { maxSeconds?: number }).maxSeconds ?? 0);
+      if (maxS > 0) {
+        setLeft(maxS);
+        limitTimer.current = setTimeout(() => { void cleanup().then(() => setStatus("ended")); }, maxS * 1000);
+      }
     } catch (e) {
       await cleanup();
       setErrorMsg(e instanceof Error ? e.message : String(e));
@@ -197,6 +214,9 @@ export default function VoiceSabatina({
           <p className="mt-2 text-sm text-neutral-300">
             {mode === "coach" ? "Mic aberto — manda que o coach executa." : "Mic aberto — responde aí que a banca tá ouvindo."}
           </p>
+          {left !== null && left <= 60 && (
+            <p className="mt-1 text-xs text-amber-300">Teus minutos de voz acabam em {left}s. Mais minutos em /assinatura.</p>
+          )}
           <button
             onClick={disconnect}
             className="mt-3 rounded-xl border border-red-800 bg-red-950/40 px-5 py-2.5 text-sm font-semibold text-red-300 hover:bg-red-950"

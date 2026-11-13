@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import VoiceSabatina from "@/components/VoiceSabatina";
+import { CallHistory } from "@/components/CallHistory";
 import { useAuthEmail } from "@/lib/useAuth";
 import { useMyProfile } from "@/lib/useProfile";
 import { SignIn } from "@/components/SignIn";
@@ -171,6 +172,7 @@ export default function Coach() {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-4" aria-live="polite">
         <VoiceSabatina mode="coach" profileEmail={profile.email} />
+        <CallHistory />
         <Briefing profileId={profile._id} ctx={ctx} />
         <ActivityFeed profileId={profile._id} />
 

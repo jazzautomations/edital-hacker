@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import type { Opportunity, Profile } from "@/lib/types";
 import { useAuthEmail } from "@/lib/useAuth";
+import { LIMITS, PACKS, USAGE_LABEL, type PackId, type UsageKind } from "@/lib/plans";
 import { useMyProfile } from "@/lib/useProfile";
 import { tidyTitle } from "@/lib/format";
 import { Badge, Button, Card, Field, Input, LinkButton, Notice, Page, PageHeader } from "@/components/ui";
@@ -18,7 +19,14 @@ const PLANS = [
     pitch: "Pra quem vive de edital e show e quer parar de perder prazo.",
     monthly: { price: "R$ 49,90", cycle: "MONTHLY", label: "por mês" },
     annual: { price: "R$ 479", cycle: "ANNUALLY", label: "por ano · sai R$ 39,90/mês" },
-    features: ["Sabatina de banca ilimitada", "Pipeline, documentos e contatos", "Aviso de prazo e de certidão vencendo", "Coach por texto e por voz"],
+    features: [
+      `Coach por texto (${LIMITS.manager.coach_msg}/dia) e por voz (${LIMITS.manager.voice_min} min/mês)`,
+      `${LIMITS.manager.prospect} prospecções e ${LIMITS.manager.agency_map} mapeamentos de agência por mês`,
+      "WhatsApp conectado: pede dados e assinaturas da banda",
+      `${LIMITS.manager.sign_doc} documentos pra assinar por mês`,
+      "Sabatina de banca ilimitada",
+      "Aviso de prazo e de certidão vencendo",
+    ],
   },
   {
     plan: "manager_pro",
@@ -26,7 +34,14 @@ const PLANS = [
     pitch: "Pra quem executa projeto aprovado e precisa prestar contas.",
     monthly: { price: "R$ 99,90", cycle: "MONTHLY", label: "por mês" },
     annual: { price: "R$ 959", cycle: "ANNUALLY", label: "por ano · sai R$ 79,90/mês" },
-    features: ["Tudo do Manager", "Prestação de contas no formato do edital", "Contrato de show e revisão de contrato", "Roteiro ECAD e rider técnico em PDF"],
+    features: [
+      "Tudo do Manager",
+      `Voz: ${LIMITS.manager_pro.voice_min} min/mês · coach ${LIMITS.manager_pro.coach_msg} msgs/dia`,
+      `${LIMITS.manager_pro.prospect} prospecções e ${LIMITS.manager_pro.agency_map} mapeamentos de agência por mês`,
+      "Documentos pra assinar sem limite",
+      "Prestação de contas, contrato de show e revisão de contrato",
+      "Roteiro ECAD e rider técnico em PDF",
+    ],
     featured: true,
   },
 ];
@@ -41,7 +56,7 @@ type Pix = { pixId: string; brCode: string; brCodeBase64: string; amount: number
 function Inner() {
   const params = useSearchParams();
   const unlockOpp = params.get("unlock");
-  const { email, ready } = useAuthEmail();
+  const { email, ready, token } = useAuthEmail();
   const [cycle, setCycle] = useState<"MONTHLY" | "ANNUALLY">("ANNUALLY");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +72,12 @@ function Inner() {
     | undefined;
   const subscribe = useAction(api.billing.subscribe);
   const pixQr = useAction(api.billing.pixUnlock);
+  const pixPack = useAction(api.billing.pixPack);
+  const [pack, setPack] = useState<PackId | null>(null);
+  const usage = useQuery(api.usage.mine, token ? { token } : "skip") as
+    | { plan: string; usage: Record<UsageKind, { used: number; limit: number; credits: number; period: string }> }
+    | null
+    | undefined;
   const pixStatus = useAction(api.billing.pixStatus);
   const pixSimulate = useAction(api.billing.pixSimulate);
   const polling = useRef(false);
@@ -86,6 +107,23 @@ function Inner() {
     }, 4000);
     return () => clearInterval(t);
   }, [pix, paid, pixStatus]);
+
+  async function gerarPixPacote(id: PackId) {
+    if (!profile) return;
+    if (cpf.replace(/\D/g, "").length !== 11) {
+      setError("Digita o CPF completo de quem vai pagar (11 números).");
+      return;
+    }
+    setBusy("pix");
+    setError(null);
+    try {
+      setPix((await pixPack({ token, pack: id, taxId: cpf })) as Pix);
+    } catch (e) {
+      setError(/CPF inválido/.test(String(e)) ? "Esse CPF não confere. Olha os números e tenta de novo." : "Não deu pra gerar o Pix agora. Tenta de novo em instantes.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function gerarPix() {
     if (!profile || !unlockOpp) return;
@@ -124,40 +162,7 @@ function Inner() {
     }
   }
 
-  return (
-    <Page width="max-w-4xl">
-      <PageHeader
-        title="Menos que a comissão de um show."
-        description="Um booker fica com 15 a 20% de cada cachê. O Manager custa um valor fixo e não tira nada do que você ganha."
-        actions={profile && plan ? <Badge tone={plan.plan === "free" ? "neutral" : "good"}>Plano atual: {plan.plan === "free" ? "grátis" : plan.plan === "manager_pro" ? "Manager Pro" : "Manager"}</Badge> : undefined}
-      />
-
-      {ready && !profile && profile !== undefined || (ready && !email) ? (
-        <div className="mb-8">
-          <Notice tone="info">
-            Pra pagar a gente precisa saber de quem é a conta.{" "}
-            <a href={loginHref} className="font-semibold underline underline-offset-2">Entrar ou criar perfil</a> leva 1 minuto.
-          </Notice>
-        </div>
-      ) : null}
-
-      {error && <div className="mb-6"><Notice tone="bad">{error}</Notice></div>}
-
-      {unlockOpp && (
-        <Card as="section" className="mb-10 border-emerald-500/40">
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-emerald-400">Só este edital</p>
-          <h2 className="mt-2 text-xl font-semibold text-neutral-50">
-            {opp ? tidyTitle(opp.name) : "Destravar a sabatina deste edital"}
-          </h2>
-
-          {paid || alreadyUnlocked ? (
-            <div className="mt-5 flex flex-col items-start gap-4">
-              <Notice tone="good">
-                <b>Pagamento confirmado.</b> A sabatina deste edital está liberada pra você, sem limite de tentativas.
-              </Notice>
-              <LinkButton href={`/sabatina/${unlockOpp}`} size="lg">Ir pra sabatina</LinkButton>
-            </div>
-          ) : pix ? (
+  const pixBox = pix ? (
             <div className="mt-5 grid items-center gap-6 sm:grid-cols-[auto_1fr]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -210,6 +215,65 @@ function Inner() {
                 </p>
               </div>
             </div>
+  ) : null;
+
+  const bar = (k: UsageKind) => {
+    const u = usage?.usage[k];
+    if (!u) return null;
+    if (!u.limit && !u.credits) {
+      return (
+        <li key={k} className="flex justify-between text-xs text-neutral-500">
+          <span>{USAGE_LABEL[k].many}</span><span>só nos planos pagos</span>
+        </li>
+      );
+    }
+    const pct = u.limit ? Math.min(100, (u.used / u.limit) * 100) : 100;
+    return (
+      <li key={k}>
+        <div className="flex justify-between text-xs text-neutral-400">
+          <span>{USAGE_LABEL[k].many} {u.period === "dia" ? "hoje" : "no mês"}</span>
+          <span className="font-mono">{u.used}/{u.limit}{u.credits ? ` +${u.credits} extra` : ""}</span>
+        </div>
+        <div className="mt-1 h-1.5 rounded-full bg-neutral-800"><div className={`h-1.5 rounded-full ${pct >= 100 ? "bg-red-400" : pct >= 80 ? "bg-amber-300" : "bg-emerald-400"}`} style={{ width: `${pct}%` }} /></div>
+      </li>
+    );
+  };
+
+  return (
+    <Page width="max-w-4xl">
+      <PageHeader
+        title="Menos que a comissão de um show."
+        description="Um booker fica com 15 a 20% de cada cachê. O Manager custa um valor fixo e não tira nada do que você ganha."
+        actions={profile && plan ? <Badge tone={plan.plan === "free" ? "neutral" : "good"}>Plano atual: {plan.plan === "free" ? "grátis" : plan.plan === "manager_pro" ? "Manager Pro" : "Manager"}</Badge> : undefined}
+      />
+
+      {ready && !profile && profile !== undefined || (ready && !email) ? (
+        <div className="mb-8">
+          <Notice tone="info">
+            Pra pagar a gente precisa saber de quem é a conta.{" "}
+            <a href={loginHref} className="font-semibold underline underline-offset-2">Entrar ou criar perfil</a> leva 1 minuto.
+          </Notice>
+        </div>
+      ) : null}
+
+      {error && <div className="mb-6"><Notice tone="bad">{error}</Notice></div>}
+
+      {unlockOpp && (
+        <Card as="section" className="mb-10 border-emerald-500/40">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-emerald-400">Só este edital</p>
+          <h2 className="mt-2 text-xl font-semibold text-neutral-50">
+            {opp ? tidyTitle(opp.name) : "Destravar a sabatina deste edital"}
+          </h2>
+
+          {paid || alreadyUnlocked ? (
+            <div className="mt-5 flex flex-col items-start gap-4">
+              <Notice tone="good">
+                <b>Pagamento confirmado.</b> A sabatina deste edital está liberada pra você, sem limite de tentativas.
+              </Notice>
+              <LinkButton href={`/sabatina/${unlockOpp}`} size="lg">Ir pra sabatina</LinkButton>
+            </div>
+          ) : pix && !pack ? (
+            pixBox
           ) : (
             <>
               <p className="mt-2 text-sm leading-relaxed text-neutral-400">
@@ -284,8 +348,42 @@ function Inner() {
           );
         })}
       </div>
+      {usage && (
+        <Card as="section" className="mt-10">
+          <h2 className="text-lg font-semibold text-neutral-50">Teu uso</h2>
+          <ul className="mt-4 grid gap-4 sm:grid-cols-2">{(["coach_msg", "voice_min", "prospect", "agency_map", "sign_doc"] as UsageKind[]).map(bar)}</ul>
+        </Card>
+      )}
+
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold text-neutral-50">Precisa de mais no mês?</h2>
+        <p className="mt-1 text-sm text-neutral-400">Pacote avulso no Pix, sem assinatura. O crédito não vence.</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {(Object.keys(PACKS) as PackId[]).map((id) => (
+            <div key={id} className={`rounded-2xl border p-5 ${pack === id ? "border-emerald-500/50" : "border-neutral-800"}`}>
+              <p className="font-semibold text-neutral-50">{PACKS[id].title}</p>
+              <p className="mt-1 font-display text-3xl text-neutral-50">R$ {(PACKS[id].cents / 100).toFixed(2).replace(".", ",")}</p>
+              {pack === id && pix ? (
+                paid ? <div className="mt-3"><Notice tone="good"><b>Pago.</b> O crédito já está na tua conta.</Notice></div> : <div className="mt-2">{pixBox}</div>
+              ) : pack === id ? (
+                <form className="mt-3 flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void gerarPixPacote(id); }}>
+                  <Field label="CPF de quem paga" hint="O banco exige pra gerar o Pix.">
+                    <Input inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(fmtCpf(e.target.value))} />
+                  </Field>
+                  <Button type="submit" loading={busy === "pix"} disabled={!profile}>Gerar Pix</Button>
+                </form>
+              ) : (
+                <Button className="mt-3" variant="secondary" disabled={!profile} onClick={() => { setPack(id); setPix(null); setPaid(false); setError(null); }}>
+                  {profile ? "Comprar" : "Entra pra comprar"}
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
       <p className="mt-5 text-sm leading-relaxed text-neutral-500">
-        Radar de editais e a primeira sabatina são grátis pra sempre. Pagamento por Pix ou cartão via AbacatePay. Cancela quando quiser.
+        Grátis pra sempre: radar de editais, cofre de documentos, 1 sabatina, coach por texto (15 mensagens/dia) e 5 minutos de voz por mês. Pagamento por Pix ou cartão via AbacatePay. Cancela quando quiser.
       </p>
     </Page>
   );

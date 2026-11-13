@@ -18,6 +18,13 @@ export async function POST(req: Request) {
   const profile = (await convex.query(api.profiles.me, { token })) as any;
   if (!profile) return NextResponse.json({ error: "sessão inválida" }, { status: 401 });
   const profileEmail: string = profile.email;
+  const quota = (await convex.mutation(api.usage.consumeFromServer, { secret: process.env.NOTIFY_SECRET ?? "", profileId: profile._id, kind: "coach_msg" })) as { ok: boolean; limit: number };
+  if (!quota.ok) {
+    return NextResponse.json(
+      { reply: `Tu usou as ${quota.limit} mensagens de hoje do teu plano. Amanhã zera, ou dá pra subir de plano em /assinatura e conversar à vontade.`, limit: true },
+      { status: 429 }
+    );
+  }
   const fullCtx = (await convex.query(api.riders.coachContext, { profileId: profile._id })) as any;
 
   // histórico enxuto: as 10 últimas, cada uma cortada (resposta longa antiga só gasta cota)

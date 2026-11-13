@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { emailOfSession } from "./auth";
 import { jsonChat } from "../lib/llm";
+import { LIMITS, planOf } from "../lib/plans";
 
 // WhatsApp do próprio artista (QR code) + conversa com os integrantes:
 // pede os dados, confere com a pessoa, preenche o documento e manda o link
@@ -65,6 +66,7 @@ export const connect = mutation({
   handler: async (ctx, a) => {
     const p = await ownerProfile(ctx, a.token);
     if (!p) throw new Error("sessão inválida");
+    if (!LIMITS[planOf(p.plan)].zap) throw new Error("Conectar o WhatsApp é dos planos Manager e Pro. Vê em /assinatura.");
     const instance = `mgr-${p._id}`;
     const c = await ctx.db.query("zapConnections").withIndex("by_profile", (q) => q.eq("profileId", p._id)).first();
     if (c?.status === "conectado") return;

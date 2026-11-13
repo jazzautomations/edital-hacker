@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery, query } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { PACKS, type PackId } from "../lib/plans";
+import { action, internalMutation, internalQuery, query, type MutationCtx } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import {
   checkPix,
   createOneOffCheckout,
@@ -112,8 +113,24 @@ export const pixUnlock = action({
   },
 });
 
+/** Pacote avulso (+minutos de voz, +prospecções) no Pix. */
+export const pixPack = action({
+  args: { token: v.string(), pack: v.string(), taxId: v.string() },
+  handler: async (ctx, args) => {
+    const pack = PACKS[args.pack as PackId];
+    if (!pack) throw new Error("Pacote não existe");
+    const profile = (await ctx.runQuery(api.profiles.me, { token: args.token })) as any;
+    if (!profile) throw new Error("Sessão expirada. Entra de novo.");
+    const taxId = validTaxId(args.taxId);
+    if (!taxId) throw new Error("CPF inválido — confere os números");
+    const qr = await createPixQr({ amount: pack.cents, description: `Manager - ${pack.title}`, customer: { email: profile.email, name: profile.name, taxId } });
+    await ctx.runMutation(internal.billing.recordPixCharge, { pixId: qr.id, profileId: profile._id, pack: args.pack, amount: pack.cents });
+    return { pixId: qr.id, brCode: qr.brCode, brCodeBase64: qr.brCodeBase64, amount: pack.cents, sandbox: isSandbox() };
+  },
+});
+
 export const recordPixCharge = internalMutation({
-  args: { pixId: v.string(), profileId: v.id("profiles"), opportunityId: v.id("opportunities"), amount: v.number() },
+  args: { pixId: v.string(), profileId: v.id("profiles"), opportunityId: v.optional(v.id("opportunities")), pack: v.optional(v.string()), amount: v.number() },
   handler: async (ctx, a) => {
     await ctx.db.insert("pixCharges", { ...a, status: "PENDING", createdAt: Date.now() });
   },
@@ -126,9 +143,7 @@ export const getPixCharge = internalQuery({
 });
 
 // Idempotente: marca a cobrança paga e destrava o edital uma única vez.
-export const settlePixCharge = internalMutation({
-  args: { pixId: v.string(), status: v.string() },
-  handler: async (ctx, a) => {
+async function doSettle(ctx: MutationCtx, a: { pixId: string; status: string }) {
     const charge = await ctx.db.query("pixCharges").withIndex("by_pix", (q) => q.eq("pixId", a.pixId)).unique();
     if (!charge) return { found: false };
     if (charge.status === "PAID") return { found: true, status: "PAID" };
@@ -137,20 +152,36 @@ export const settlePixCharge = internalMutation({
       return { found: true, status: a.status };
     }
     await ctx.db.patch(charge._id, { status: "PAID", paidAt: Date.now() });
+    // pacote avulso: soma crédito
+    if (charge.pack) {
+      const pack = PACKS[charge.pack as PackId];
+      if (pack) {
+        const cur = await ctx.db.query("credits").withIndex("by_profile_kind", (q) => q.eq("profileId", charge.profileId).eq("kind", pack.kind)).unique();
+        if (cur) await ctx.db.patch(cur._id, { balance: cur.balance + pack.amount });
+        else await ctx.db.insert("credits", { profileId: charge.profileId, kind: pack.kind, balance: pack.amount });
+      }
+      return { found: true, status: "PAID" };
+    }
+    if (!charge.opportunityId) return { found: true, status: "PAID" };
+    const opportunityId = charge.opportunityId;
     const already = await ctx.db
       .query("unlockedEdits")
-      .withIndex("by_profile_opp", (q) => q.eq("profileId", charge.profileId).eq("opportunityId", charge.opportunityId))
+      .withIndex("by_profile_opp", (q) => q.eq("profileId", charge.profileId).eq("opportunityId", opportunityId))
       .first();
     if (!already) {
       await ctx.db.insert("unlockedEdits", {
         profileId: charge.profileId,
-        opportunityId: charge.opportunityId,
+        opportunityId,
         checkoutId: a.pixId,
         paidAt: Date.now(),
       });
     }
     return { found: true, status: "PAID" };
-  },
+}
+
+export const settlePixCharge = internalMutation({
+  args: { pixId: v.string(), status: v.string() },
+  handler: async (ctx, a) => await doSettle(ctx, a),
 });
 
 // A tela consulta isto enquanto o QR está aberto: confere na AbacatePay e,
@@ -240,23 +271,8 @@ export const applyEvent = internalMutation({
 
     // Pix inline pago: o id do evento é o id da cobrança registrada em pixCharges.
     if (/^(transparent|pix|billing)\./.test(args.kind) && /(completed|paid)$/.test(args.kind) && d.id) {
-      const charge = await ctx.db.query("pixCharges").withIndex("by_pix", (q) => q.eq("pixId", String(d.id))).unique();
-      if (charge && charge.status !== "PAID") {
-        await ctx.db.patch(charge._id, { status: "PAID", paidAt: Date.now() });
-        const already = await ctx.db
-          .query("unlockedEdits")
-          .withIndex("by_profile_opp", (q) => q.eq("profileId", charge.profileId).eq("opportunityId", charge.opportunityId))
-          .first();
-        if (!already) {
-          await ctx.db.insert("unlockedEdits", {
-            profileId: charge.profileId,
-            opportunityId: charge.opportunityId,
-            checkoutId: String(d.id),
-            paidAt: Date.now(),
-          });
-        }
-        return { applied: "pix-unlock" };
-      }
+      const r = await doSettle(ctx, { pixId: String(d.id), status: "PAID" });
+      if (r.found) return { applied: "pix" };
     }
 
     return { ignored: args.kind };
