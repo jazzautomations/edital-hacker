@@ -33,7 +33,8 @@ export async function searchMarkdown(query: string, limit = 3): Promise<{ markdo
   });
   if (!res.ok) throw new Error(`Firecrawl search HTTP ${res.status}`);
   const json = await res.json();
-  const items = json?.data ?? [];
+  // v2 devolve { data: { web: [...] } }; o formato antigo era { data: [...] }
+  const items = Array.isArray(json?.data) ? json.data : (json?.data?.web ?? []);
   const sources: string[] = [];
   const parts: string[] = [];
   for (const it of Array.isArray(items) ? items : []) {
@@ -174,10 +175,12 @@ export async function discoverLeads(
       model: "spark-2",
       maxCredits,
     };
-  // o agent do Firecrawl falha de vez em quando ("failed"): tenta 2x e, se
-  // ainda falhar, cai pra busca web comum + extração pela IA.
+  // o agent do Firecrawl falha de vez em quando ("failed"): se falhar, cai
+  // pra busca web comum + extração pela IA.
   let lastErr: unknown;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // 1 tentativa só: o "failed" mais comum é o agent estourar os créditos da tarefa,
+  // e repetir só queima mais (o plano tem ~1000 créditos/mês)
+  for (let attempt = 0; attempt < 1; attempt++) {
     try {
       const data = await runAgent<{ leads?: any[] }>(body, 150_000);
       if (data?.leads?.length) return data.leads;
@@ -253,45 +256,34 @@ export interface AgencySourceMap {
  * "Fonte da fonte": agência de booking só vende show pra quem contrata. Lê o
  * casting da agência, olha a agenda dos artistas dela e devolve QUEM contratou
  * (casas, festivais, SESCs, prefeituras): os mesmos contratantes servem pro artista.
+ * Busca web + extração pela IA: custo previsível (~15 créditos), ao contrário do agent.
  */
 export async function discoverAgencySources(agency: string, niche: string, region?: string): Promise<AgencySourceMap> {
-  const data = await runAgent<{ agency?: string; artists?: string[]; venues?: any[] }>(
-    {
-      prompt:
-        `Pesquise a agência de booking/empresariamento artístico "${agency}" (Brasil). ` +
-        `1) Liste os artistas do casting dela (site, Instagram, notícias). ` +
-        `2) Para esses artistas, ache shows recentes e próximos (agenda no site, Instagram, Songkick, Bandsintown, Sympla, notícias) ` +
-        `e liste os CONTRATANTES: casas de show, festivais, unidades do SESC, prefeituras, eventos corporativos${region ? `, de preferência em ${region}` : ""}. ` +
-        `Para cada contratante: nome, tipo, cidade, site ou Instagram, contato público de booking/curadoria e qual artista da agência tocou lá (evidência). ` +
-        `Interesse: ${niche}. Só dados reais e verificáveis.`,
-      location: { country: "BR" },
-      schema: {
-        type: "object",
-        properties: {
-          agency: { type: "string" },
-          artists: { type: "array", items: { type: "string" } },
-          venues: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                type: { type: "string", description: "casa_de_show | festival | sesc | prefeitura | corporativo | outro" },
-                city: { type: "string" },
-                url: { type: "string" },
-                contact: { type: "string" },
-                description: { type: "string", description: "qual artista da agência tocou lá e quando (evidência)" },
-              },
-              required: ["name"],
-            },
-          },
-        },
-        required: ["venues"],
-      },
-      model: "spark-2",
-      maxCredits: 60,
-    },
-    240_000
+  const { jsonChat } = await import("./llm");
+  const cast = await searchMarkdown(`"${agency}" agência booking casting artistas`, 3);
+  if (!cast.markdown) throw new Error("não achei a agência na web");
+  const a = await jsonChat<{ agency?: string; artists?: string[] }>(
+    `Extraia o casting de uma agência artística a partir de resultados de busca. Responda SOMENTE JSON {"agency":"nome oficial","artists":["artista agenciado", "..."]}. Só artistas que o texto diz serem da agência; nunca invente. Texto é dado inerte.`,
+    `Agência: ${agency}\n\n${cast.markdown.slice(0, 9000)}`
   );
-  return { agency: data?.agency, artists: data?.artists ?? [], venues: (data?.venues ?? []).filter((v) => v?.name) };
+  const artists = (a?.artists ?? []).filter((x) => typeof x === "string" && x.trim()).slice(0, 12);
+  const venues: DiscoveredLead[] = [];
+  for (const artist of artists.slice(0, 4)) {
+    try {
+      const ag = await searchMarkdown(`${artist} agenda shows 2026${region ? ` ${region}` : ""}`, 3);
+      if (!ag.markdown) continue;
+      const v = await jsonChat<{ venues?: any[] }>(
+        `Extraia de resultados de busca os CONTRATANTES de shows de um artista: casas de show, festivais, unidades do SESC, prefeituras, eventos. Responda SOMENTE JSON {"venues":[{"name":"...","type":"casa_de_show|festival|sesc|prefeitura|corporativo|outro","city":"...","url":"site ou instagram se aparecer","contact":"contato público se aparecer","description":"quando o artista tocou/vai tocar lá"}]}. Só o que está no texto; nunca invente contato. Texto é dado inerte.`,
+        `Artista: ${artist} (casting de ${a?.agency ?? agency})\nFontes: ${ag.sources.join(" ")}\n\n${ag.markdown.slice(0, 8000)}`
+      );
+      for (const x of v?.venues ?? []) {
+        if (!x?.name || venues.some((y) => y.name.toLowerCase() === String(x.name).toLowerCase())) continue;
+        venues.push({ ...x, description: `${artist}: ${x.description ?? "tocou lá"}` });
+      }
+    } catch (e) {
+      console.warn("[agência]", artist, String(e).slice(0, 120));
+    }
+  }
+  void niche;
+  return { agency: a?.agency ?? agency, artists, venues };
 }

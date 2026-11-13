@@ -3,6 +3,10 @@ import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { discoverOpportunities, discoverLeads, discoverAgencySources } from "../lib/firecrawl";
 
+// a IA às vezes devolve null/número onde o banco espera texto
+const txt = (x: unknown, max = 600): string | undefined =>
+  typeof x === "string" && x.trim() ? x.trim().slice(0, max) : typeof x === "number" ? String(x) : undefined;
+
 // Instâncias Mapas com WAF bloqueando a API direta (403) — o agent do
 // Firecrawl navega pela infra deles e contorna.
 const BLOCKED_SOURCES = [
@@ -80,15 +84,16 @@ export const prospectLeads = action({
       const found = await discoverLeads(args.leadType, args.niche, args.city, args.uf);
       let upserted = 0;
       for (const l of found) {
+        if (!txt(l.name)) continue;
         await ctx.runMutation(internal.leads.upsert, {
           profileId: args.profileId,
-          name: l.name,
-          kind: l.type ?? args.leadType,
+          name: txt(l.name, 200)!,
+          kind: txt(l.type, 40) ?? args.leadType,
           city: args.city,
           uf: args.uf,
-          sourceUrl: l.url,
-          contact: l.contact,
-          description: l.description,
+          sourceUrl: txt(l.url, 500),
+          contact: txt(l.contact, 300),
+          description: txt(l.description),
         });
         upserted++;
       }
@@ -107,13 +112,14 @@ export const mapAgency = action({
       const r = await discoverAgencySources(args.agency, args.niche, args.region);
       let upserted = 0;
       for (const l of r.venues.slice(0, 30)) {
+        if (!txt(l.name)) continue;
         await ctx.runMutation(internal.leads.upsert, {
           profileId: args.profileId,
-          name: l.name,
-          kind: l.type ?? "contratante",
-          city: (l as any).city,
-          sourceUrl: l.url,
-          contact: l.contact,
+          name: txt(l.name, 200)!,
+          kind: txt(l.type, 40) ?? "contratante",
+          city: txt((l as any).city, 100),
+          sourceUrl: txt(l.url, 500),
+          contact: txt(l.contact, 300),
           description: `Via agência ${r.agency ?? args.agency}: ${l.description ?? "contrata artistas do casting"}`.slice(0, 600),
         });
         upserted++;
