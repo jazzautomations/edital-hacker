@@ -78,6 +78,7 @@ export async function POST(req: Request) {
           // na voz, rota vira nome de tela
           .replace(/\/sabatina\/[a-z0-9]+/g, "a banca simulada do edital")
           .replace(/\/(oportunidades|pipeline|prospeccao|agenda|documentos|assinaturas|coach|inicio|rider|prestacao)\b/g, (_, r: string) => ({ oportunidades: "o radar", prospeccao: "a prospecção", prestacao: "a prestação de contas", inicio: "o início" } as Record<string, string>)[r] ?? r)
+          .replace(/\s*\(?https?:\/\/\S+?\)?(?=[\s.,;]|$)/g, "") // link não se fala; fica no app
           .replace(/\*\*/g, "");
         send(final || "Não consegui fazer isso agora. Tenta de novo?");
       } catch (e) {
