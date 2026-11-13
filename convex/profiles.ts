@@ -146,3 +146,27 @@ export const deleteAccount = mutation({
     return { deleted: true };
   },
 });
+
+/** O coach ajusta o perfil a pedido do artista (servidor do app, com o segredo). */
+export const updateFromServer = mutation({
+  args: {
+    secret: v.string(),
+    profileId: v.id("profiles"),
+    name: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    tagline: v.optional(v.string()),
+    city: v.optional(v.string()),
+    uf: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    personType: v.optional(v.string()),
+    artAreas: v.optional(v.array(v.string())),
+    socialLinks: v.optional(v.array(v.string())),
+    team: v.optional(v.array(v.object({ name: v.string(), role: v.optional(v.string()), phone: v.optional(v.string()) }))),
+  },
+  handler: async (ctx, { secret, profileId, ...fields }) => {
+    if (!process.env.NOTIFY_SECRET || secret !== process.env.NOTIFY_SECRET) throw new Error("não autorizado");
+    const patch = Object.fromEntries(Object.entries(fields).filter(([, val]) => val !== undefined && val !== ""));
+    if (Object.keys(patch).length) await ctx.db.patch(profileId, patch);
+    return Object.keys(patch);
+  },
+});

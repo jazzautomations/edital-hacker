@@ -28,7 +28,7 @@ Vocabulário B.R.A.V.O.: Base (materiais, docs), Repertório (projetos), Audiên
 
 Regras:
 1. Você TEM MEMÓRIA: recebe o contexto completo da carreira do artista (gigs, leads, pipeline, docs, riders, sabatinas). USE — cite valores, datas e nomes reais do contexto quando relevante.
-2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Falou de agência, empresário, booking, showcase → consultar_mercado; quer descobrir onde os artistas de uma agência tocam → mapear_agencia. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Quer se inscrever ou preparar um edital → ler_edital, depois checklist_edital: diga o que já tem, o que falta (peça pra mandar em /documentos), o que precisa escrever (ofereça redigir junto) e sugira treinar a banca em /sabatina. Se não conseguir ler o edital, peça o link do PDF do regulamento. Precisa de documento assinado por mais gente (declaração, anexo, anuência da banda) → preparar_assinaturas: pergunte nome e WhatsApp de cada integrante e a ordem, se não souber; depois ofereça pedir os dados no zap (pedir_dados_zap). Dúvida fora do app (regra, notícia, como emitir certidão, quem é o financiador) → pesquisar_web, citando a fonte. Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. SÓ converse quando nenhuma tool se aplicar.
+2. Você TEM BRAÇOS: pediu prospecção → prospect_leads. Pediu pra anotar show/cachê → create_gig. Pediu pra mover lead no funil → update_lead_status. Pediu documento (rider, EPK, contrato, proposta, prestação) → prepare_document. Perguntou de email → list_unanswered_emails; pediu resposta → draft_email_reply (sempre rascunho, nunca envia). Perguntou de agenda/disponibilidade → check_calendar; pediu pra botar no Google Calendar → sync_gig_to_calendar. Falou de agência, empresário, booking, showcase → consultar_mercado; quer descobrir onde os artistas de uma agência tocam → mapear_agencia. Perguntou preço/quanto cobrar → consultar_cache (benchmark REAL do PNCP). Quer se inscrever ou preparar um edital → ler_edital, depois checklist_edital: diga o que já tem, o que falta (peça pra mandar em /documentos), o que precisa escrever (ofereça redigir junto) e sugira treinar a banca em /sabatina. Se não conseguir ler o edital, peça o link do PDF do regulamento. Precisa de documento assinado por mais gente (declaração, anexo, anuência da banda) → preparar_assinaturas: pergunte nome e WhatsApp de cada integrante e a ordem, se não souber; depois ofereça pedir os dados no zap (pedir_dados_zap). Dúvida fora do app (regra, notícia, como emitir certidão, quem é o financiador) → pesquisar_web, citando a fonte. Perguntou de editais abertos, oportunidade, fomento, prêmio, chamada → buscar_editais (o RADAR, editais reais abertos agora, ordenados pelo que mais combina com o artista); pediu pra guardar/acompanhar/se inscrever num → salvar_edital. Pediu pra mudar algo no app (perfil, etapa de edital, show pago/cancelado) → atualizar_perfil, mover_edital, atualizar_trabalho: FAÇA, não explique como fazer. NUNCA diga que vai pesquisar/olhar sem chamar a tool na mesma resposta; NUNCA afirme se um edital está aberto sem buscar_editais ou pesquisar_web. SÓ converse quando nenhuma tool se aplicar.
 2b. RAPPORT É LEI: antes de redigir email de abordagem ou proposta pra um lead/edital, chama research_target se o dossiê ainda não existir — e SEMPRE use os ganchos de rapport do dossiê no texto (citar show recente, linguagem deles, projeto específico). Email genérico é spam.
 3. Respostas curtas e diretas (2-5 frases), tom de empresário parceiro que fala a língua do artista. Português BR informal mas profissional.
 4. Medir em R$: fale de cachê, pipeline, a receber — nunca de "viralizar" ou métricas de vaidade.
@@ -345,6 +345,51 @@ export const COACH_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: "atualizar_perfil",
+    description:
+      "Muda o perfil do artista no app quando ele pedir (nome artístico, bio, frase de apresentação, cidade, UF, telefone, tipo de proponente, áreas, links, integrantes da banda). Mande só os campos que mudam.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        bio: { type: "string" },
+        tagline: { type: "string" },
+        city: { type: "string" },
+        uf: { type: "string", description: "sigla, ex SP" },
+        phone: { type: "string" },
+        personType: { type: "string", description: "Pessoa Física | MEI | Pessoa Jurídica | Coletivo sem CNPJ" },
+        artAreas: { type: "array", items: { type: "string" } },
+        socialLinks: { type: "array", items: { type: "string" }, description: "lista COMPLETA de links (substitui a anterior)" },
+        team: {
+          type: "array",
+          description: "lista COMPLETA de integrantes (substitui a anterior)",
+          items: { type: "object", properties: { name: { type: "string" }, role: { type: "string" }, phone: { type: "string" } }, required: ["name"] },
+        },
+      },
+    },
+  },
+  {
+    name: "mover_edital",
+    description: "Muda a etapa de um edital no pipeline: descoberta, interessado (vou inscrever), inscrito, ganho, execucao, prestacao, arquivado. Também tira do pipeline com etapa 'remover'.",
+    parameters: {
+      type: "object",
+      properties: { ref: { type: "string", description: "nome do edital ou ref interna" }, etapa: { type: "string" } },
+      required: ["ref", "etapa"],
+    },
+  },
+  {
+    name: "atualizar_trabalho",
+    description: "Atualiza um show/trabalho da agenda: marcar como pago, confirmado, cancelado, ou apagar. Use quando o artista disser que recebeu o cachê, que o show caiu etc.",
+    parameters: {
+      type: "object",
+      properties: {
+        trabalho: { type: "string", description: "nome do show/casa ou data" },
+        status: { type: "string", description: "marcado | confirmado | realizado | pago | cancelado | apagar" },
+      },
+      required: ["trabalho", "status"],
+    },
+  },
+  {
     name: "pesquisar_web",
     description: "Pesquisa na internet e lê as páginas (fontes reais). Use pra dúvidas sobre editais, financiadores, regras, como emitir certidões, notícias do setor.",
     parameters: {
@@ -525,7 +570,7 @@ export async function runCoachTool(
         .filter(({ v }) => !uf || v.uf === uf || v.uf === null)
         .filter(({ dias }) => maxDias === null || (dias !== null && dias <= maxDias))
         .sort((a, b) => b.fit.score - a.fit.score || (a.dias ?? 999) - (b.dias ?? 999));
-      if (!rows.length) return `Nenhum edital aberto no radar com esse filtro${busca ? ` ("${call.arguments.busca}")` : ""}. Tenta sem filtro ou vê tudo em /oportunidades.`;
+      if (!rows.length) return `O radar não tem edital aberto com esse filtro${busca ? ` ("${call.arguments.busca}")` : ""}. Isso NÃO quer dizer que não existe: chame pesquisar_web agora pra checar na internet (site oficial, notícias, calendário) antes de responder.`;
       const brl = (n: number) => `R$ ${Math.round(n).toLocaleString("pt-BR")}`;
       return (
         `RADAR: ${rows.length} editais abertos${busca || uf || maxDias ? " com esse filtro" : ""}. Os que mais combinam com o artista:\n` +
@@ -630,6 +675,60 @@ export async function runCoachTool(
       const r = (await convex.mutation(api.zap.startIntakeFromServer, { secret: process.env.NOTIFY_SECRET ?? "", profileId: profile._id, docId: d._id as never })) as { ok: boolean; sent?: number; semFone?: string[] };
       if (!r.ok) return "O WhatsApp do artista não está conectado. Peça pra conectar em /assinaturas (QR code, 30 segundos) e chame de novo.";
       return `Pedi os dados de "${d.title}" pra ${r.sent} pessoa(s) pelo WhatsApp do artista.${r.semFone?.length ? ` Sem número cadastrado: ${r.semFone.join(", ")} (peça o WhatsApp deles).` : ""} O andamento aparece em /assinaturas; cada um recebe o link quando os dados estiverem conferidos e for a vez.`;
+    }
+    case "atualizar_perfil": {
+      const a = call.arguments as Record<string, unknown>;
+      const str = (x: unknown) => (typeof x === "string" && x.trim() ? x.trim().slice(0, 1500) : undefined);
+      const changed = (await convex.mutation(api.profiles.updateFromServer, {
+        secret: process.env.NOTIFY_SECRET ?? "",
+        profileId: profile._id,
+        name: str(a.name),
+        bio: str(a.bio),
+        tagline: str(a.tagline),
+        city: str(a.city),
+        uf: str(a.uf)?.toUpperCase().slice(0, 2),
+        phone: str(a.phone),
+        personType: str(a.personType),
+        artAreas: Array.isArray(a.artAreas) ? a.artAreas.map(String).slice(0, 12) : undefined,
+        socialLinks: Array.isArray(a.socialLinks) ? a.socialLinks.map(String).slice(0, 8) : undefined,
+        team: Array.isArray(a.team)
+          ? (a.team as any[]).filter((m) => m?.name).map((m) => ({ name: String(m.name), role: m.role ? String(m.role) : undefined, phone: m.phone ? String(m.phone) : undefined })).slice(0, 20)
+          : undefined,
+      })) as string[];
+      return changed.length ? `Perfil atualizado (${changed.join(", ")}). Já vale no radar, no press kit e nos documentos.` : "Nada pra mudar: nenhum campo veio preenchido.";
+    }
+    case "mover_edital": {
+      const pipeline = (await convex.query(api.pipeline.listForProfile, { profileId: profile._id })) as any[];
+      const opp = bestMatch(String(call.arguments.ref ?? ""), pipeline.map((i) => i.opportunity).filter(Boolean));
+      const item = opp ? pipeline.find((i) => i.opportunity?._id === opp._id) : null;
+      if (!item) return `Esse edital não tá no pipeline. Pra adicionar, use salvar_edital.`;
+      const etapa = fold(String(call.arguments.etapa ?? ""));
+      if (/remov|tira|apag/.test(etapa)) {
+        await convex.mutation(api.pipeline.remove, { id: item._id });
+        return `"${viewOf(item.opportunity).title}" saiu do pipeline.`;
+      }
+      const map: Record<string, string> = { descob: "descoberta", interess: "interessado", "vou inscrever": "interessado", inscri: "inscrito", ganh: "ganho", aprov: "ganho", execu: "execucao", prest: "prestacao", arquiv: "arquivado", perd: "arquivado" };
+      const stage = Object.entries(map).find(([k]) => etapa.includes(k))?.[1];
+      if (!stage) return `Etapa "${call.arguments.etapa}" não existe. Use: descoberta, interessado, inscrito, ganho, execucao, prestacao, arquivado.`;
+      await convex.mutation(api.pipeline.move, { id: item._id, stage });
+      return `"${viewOf(item.opportunity).title}" agora está em ${stage} no /pipeline.`;
+    }
+    case "atualizar_trabalho": {
+      const gigs = (await convex.query(api.gigs.listForProfile, { profileId: profile._id })) as any[];
+      const needle = fold(String(call.arguments.trabalho ?? ""));
+      const words = needle.split(/\s+/).filter((w) => w.length > 2);
+      const g = gigs.find((x) => { const h = fold(`${x.title} ${x.venue ?? ""} ${x.date}`); return words.length && words.every((w) => h.includes(w)); })
+        ?? gigs.find((x) => fold(`${x.title} ${x.venue ?? ""} ${x.date}`).includes(needle));
+      if (!g) return `Não achei esse trabalho na agenda. Os próximos: ${gigs.slice(0, 5).map((x) => `${x.title} (${x.date.slice(0, 10)})`).join("; ") || "nenhum"}.`;
+      const st = fold(String(call.arguments.status ?? ""));
+      if (/apag|remov|exclu/.test(st)) {
+        await convex.mutation(api.gigs.remove, { id: g._id });
+        return `"${g.title}" saiu da agenda.`;
+      }
+      const status = ["marcado", "confirmado", "realizado", "pago", "cancelado"].find((x) => st.includes(x.slice(0, 5))) ?? (st.includes("receb") ? "pago" : null);
+      if (!status) return "Status não reconhecido. Use marcado, confirmado, realizado, pago ou cancelado.";
+      await convex.mutation(api.gigs.setStatus, { id: g._id, status });
+      return `"${g.title}" (${g.date.slice(0, 10)}) agora está como ${status} na /agenda.`;
     }
     case "pesquisar_web": {
       const q = String(call.arguments.pergunta ?? "").trim();

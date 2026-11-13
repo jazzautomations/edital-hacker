@@ -61,10 +61,11 @@ export async function POST(req: Request) {
     system =
       `${COACH_SYSTEM}\n\n=== MEMÓRIA DA CARREIRA ===\n${coachContextBlock(fullCtx)}\n\n` +
       `Modo VOZ: respostas curtas e faladas (1-3 frases), sem markdown, sem listas — conversa de empresário parceiro. ` +
-      `Quando executar uma tool, confirme em uma frase o que fez e onde a pessoa vê o resultado.`;
+      `Quando executar uma tool, confirme em uma frase o que fez e onde a pessoa vê o resultado. Fale de telas pelo nome (radar, pipeline, prospecção), nunca rota com barra.`;
     greeting =
-      `Salve, ${profile.name.split(" ")[0]}! Sou teu Manager — sei onde tu tá na carreira. Manda: quer que eu cace lead, anote um show na agenda ou aponte um documento?`;
-    tools = COACH_TOOLS.map((t) => ({
+      `Salve, ${profile.name.split(" ")[0]}! Sou teu Manager — sei onde tu tá na carreira. Pode mandar: pesquiso edital, leio regulamento, monto checklist, caço contratante, mexo no teu perfil e na agenda.`;
+    tools = [];
+    void COACH_TOOLS.map((t) => ({
       type: "function",
       function: t,
       server: {
@@ -149,18 +150,34 @@ export async function POST(req: Request) {
         // Formato validado contra a API (nov/2026): ASR nativo só precisa do idioma;
         // LLM e TTS "managed" exigem vendor + url (e model no TTS) da lista do plano.
         asr: { language: "pt-BR" },
-        llm: {
-          credential_mode: "managed",
-          vendor: "openai",
-          style: "openai",
-          url: "https://api.openai.com/v1/chat/completions",
-          system_messages: [{ role: "system", content: system }],
-          greeting_message: greeting,
-          failure_message: "Tive um problema técnico — pode repetir?",
-          max_history: 10,
-          params: { model: process.env.AGORA_LLM_MODEL ?? "gpt-4o-mini" },
-          tools,
-        },
+        // coach: o cérebro é o nosso servidor (/api/voice-llm), com as mesmas
+        // tools do chat executando aqui. O tool calling "managed" da Agora não
+        // executava nada. A banca segue no managed (só fala, não precisa de tool).
+        llm:
+          mode === "coach"
+            ? {
+                vendor: "custom",
+                style: "openai",
+                url: `${appUrl}/api/voice-llm?email=${encodeURIComponent(profileEmail)}&sig=${signParts("voice-llm", profileEmail)}`,
+                api_key: process.env.VOICE_LLM_API_KEY ?? "manager",
+                system_messages: [{ role: "system", content: system }],
+                greeting_message: greeting,
+                failure_message: "Tive um problema técnico, pode repetir?",
+                max_history: 16,
+                params: { model: "manager-coach" },
+              }
+            : {
+                credential_mode: "managed",
+                vendor: "openai",
+                style: "openai",
+                url: "https://api.openai.com/v1/chat/completions",
+                system_messages: [{ role: "system", content: system }],
+                greeting_message: greeting,
+                failure_message: "Tive um problema técnico — pode repetir?",
+                max_history: 10,
+                params: { model: process.env.AGORA_LLM_MODEL ?? "gpt-4o-mini" },
+                tools,
+              },
         tts: {
           credential_mode: "managed",
           vendor: "openai",

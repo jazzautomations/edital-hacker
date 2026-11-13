@@ -210,7 +210,8 @@ export interface ToolCall {
 export async function chatWithTools(
   messages: { role: string; content?: string | null; [k: string]: unknown }[],
   tools: ToolDef[],
-  exec: (call: ToolCall) => Promise<string>
+  exec: (call: ToolCall) => Promise<string>,
+  onToolStart?: (names: string[], said: string | null) => void
 ): Promise<{ reply: string; actionsRun: { name: string; result: string }[] }> {
   const actionsRun: { name: string; result: string }[] = [];
   const msgs: any[] = [...messages];
@@ -234,6 +235,7 @@ export async function chatWithTools(
 
     const calls = msg.tool_calls ?? [];
     if (!calls.length) return { reply: msg.content ?? "", actionsRun };
+    onToolStart?.(calls.map((c: any) => c.function?.name ?? ""), msg.content ?? null);
 
     // devolve a mensagem inteira (inclui extra_content/thought_signature do Gemini)
     msgs.push({ ...msg, role: "assistant", content: msg.content ?? null, tool_calls: calls });
