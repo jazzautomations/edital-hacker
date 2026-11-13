@@ -253,6 +253,33 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_profile", ["profileId"]),
 
+  // Documento pra vários assinarem (declarações de edital, anuência de integrantes…)
+  signDocs: defineTable({
+    profileId: v.id("profiles"),
+    opportunityId: v.optional(v.id("opportunities")),
+    title: v.string(),
+    body: v.string(),
+    sequential: v.boolean(), // true = cada um só assina depois do anterior
+    deadline: v.optional(v.string()), // YYYY-MM-DD
+    signers: v.array(
+      v.object({
+        name: v.string(),
+        role: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        order: v.number(),
+        token: v.string(), // link de assinatura (só o dono do documento vê)
+        status: v.string(), // pendente | assinado
+        cpf: v.optional(v.string()),
+        rg: v.optional(v.string()),
+        address: v.optional(v.string()),
+        signature: v.optional(v.string()), // PNG data URL do traço
+        signedAt: v.optional(v.number()),
+      })
+    ),
+    createdAt: v.number(),
+  }).index("by_profile", ["profileId"]),
+  signLinks: defineTable({ token: v.string(), docId: v.id("signDocs"), order: v.number() }).index("by_token", ["token"]),
+
   // Transcrição de cada chamada de voz (coach ou sabatina), gravada ao desligar.
   voiceCalls: defineTable({
     profileId: v.id("profiles"),

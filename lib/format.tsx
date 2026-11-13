@@ -58,7 +58,7 @@ function flattenTables(text: string): string {
 export function RichText({ text: raw }: { text: string }) {
   const text = flattenTables(raw);
   const out: ReactNode[] = [];
-  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/sabatina\/[a-z0-9]{16,}|\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinatura|documentos|inicio|epk)\b)|(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g;
+  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w/])(\/sabatina\/[a-z0-9]{16,}|\/(?:agenda|prospeccao|pipeline|coach|rider|prestacao|oportunidades|assinaturas|assinatura|documentos|inicio|epk)\b)|(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
